@@ -3,4 +3,3 @@
 venv
 config/.env
 src/config/.env
-__pycache__
