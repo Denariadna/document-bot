@@ -9,12 +9,18 @@ python3 -m poetry install # Установка зависимостей из poe
 python3 -m poetry lock # Заполнение poetry.lock
 # poetry install
 
-# Запуск
+# Запуск Docker
 docker compose up --build -d
 # docker kill $(docker ps -a -q)
 
+# Запустить app.py (bot_polling)
+python3 -m src.app
+
 # Удалять мусор
 # sudo find . -name '__pycache__' -type d -exec rm -rf {} +
+
+# вывести древо проекта
+# tree -I '.vscode|venv|.mypy_cache|__pycache__'
 
 # Миграции
 # alembic init alembic

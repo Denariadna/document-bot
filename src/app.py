@@ -1,20 +1,21 @@
 import asyncio
 import logging
 import uvicorn
+from typing import AsyncGenerator
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from aiogram import Bot, Dispatcher
 
 from config.settings import settings
-from bot import setup_bot, setup_dp
-from src.handlers.command.router import router as command_router
-from src.api.v1.router import router as v1_router
+from .bot import setup_bot, setup_dp
+from .handlers.command.router import router as command_router
+from .api.v1.router import router as v1_router
 
 
 logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logging.info("Starting lifespan...")
 
     # Создаем экземпляры бота и диспетчера
@@ -44,7 +45,7 @@ def create_app() -> FastAPI:
     return app
 
 # Функция для запуска polling
-async def start_polling():
+async def start_polling() -> None:
     dp = Dispatcher()
     setup_dp(dp)
     bot = Bot(token=settings.BOT_TOKEN)
