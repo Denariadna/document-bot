@@ -11,7 +11,7 @@ def validate_token(
     try:
         parsed_token = jwt.decode(
             token,
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+            "wuoWElAwkrxPt0D7dSXCcK_Dmk2cVMMfPQfjbDYm9aY",
             algorithms=["HS256"],
         )
     except jwt.InvalidSignatureError:

@@ -1,5 +1,12 @@
-# created by virtualenv automatically
+#IDE
 .idea
-venv
+.vscode
+
+#Secrets
 config/.env
 src/config/.env
+
+#Temp
+venv
+__pycache__
+.mypy_cache
