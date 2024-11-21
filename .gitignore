@@ -8,5 +8,6 @@ src/config/.env
 
 #Temp
 venv
+.venv
 __pycache__
 .mypy_cache

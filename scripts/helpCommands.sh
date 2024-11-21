@@ -1,10 +1,11 @@
 # Виртуальный окружение
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 # deactivate
-# rm -rf venv
+# rm -rf .venv
 
 # Зависимости
+pip install poetry # Установка poetry
 python3 -m poetry install # Установка зависимостей из poetry.lock
 python3 -m poetry lock # Заполнение poetry.lock
 # poetry install
@@ -15,6 +16,9 @@ docker compose up --build -d
 
 # Запустить app.py (bot_polling)
 python3 -m src.app
+
+# Запустить app.py (bot_webhook)
+python3 -m uvicorn src.app:create_app --factory --host 0.0.0.0
 
 # Удалять мусор
 # sudo find . -name '__pycache__' -type d -exec rm -rf {} +
