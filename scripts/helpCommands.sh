@@ -5,7 +5,7 @@ source .venv/bin/activate
 # rm -rf .venv
 
 # Зависимости
-pip install poetry # Установка poetry
+python3 -m pip install poetry # Установка poetry
 python3 -m poetry install # Установка зависимостей из poetry.lock
 python3 -m poetry lock # Заполнение poetry.lock
 # poetry install
@@ -16,15 +16,29 @@ docker compose up --build -d
 
 # Запустить app.py (bot_polling)
 python3 -m src.app
+PYTHONPATH=. python3 -m src.app
+
 
 # Запустить app.py (bot_webhook)
-python3 -m uvicorn src.app:create_app --factory --host 0.0.0.0
-
+python3 -m uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8000
 # Удалять мусор
 # sudo find . -name '__pycache__' -type d -exec rm -rf {} +
 
 # вывести древо проекта
-# tree -I '.vscode|venv|.mypy_cache|__pycache__'
+# tree -I '.vscode|.venv|.mypy_cache|__pycache__'
+
+# find . -type f \
+# ! -path './.vscode/*' \
+#     ! -path './node_modules/*' \
+#     ! -path './.venv/*' \
+#     ! -path './.mypy_cache/*' \
+#     ! -path './pycache/*' \
+#     ! -path './src/storage/__pycache__/*.cpython-312.pyc' \
+#     ! -name '*.cpython-312.pyc' \
+#     ! -path '*/__pycache__/*.pyc' \
+#     ! -path './.git/*' \
+#     ! -path './poetry.lock' \
+#     -exec echo "Opening file: {}" \; -exec cat {} \;
 
 # Миграции
 # alembic init alembic

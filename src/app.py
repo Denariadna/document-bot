@@ -1,66 +1,66 @@
 import asyncio
 import logging
-import uvicorn
 from typing import AsyncGenerator
+
+import uvicorn
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from aiogram import Bot, Dispatcher
 
 from config.settings import settings
-from .bot import setup_bot, setup_dp
-from .handlers.command.router import router as command_router
-from .api.v1.router import router as v1_router
+from src.api.tg.router import router as tg_router
+from src.bg_tasks import background_tasks
+from src.bot import dp, bot
 
+from src.logger import LOGGING_CONFIG, logger
 
-logging.basicConfig(level=logging.INFO)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    logging.info("Starting lifespan...")
+    logging.config.dictConfig(LOGGING_CONFIG)
 
-    # Создаем экземпляры бота и диспетчера
-    bot = Bot(token=settings.BOT_TOKEN)
-    dp = Dispatcher()
-
-    # Настройка диспетчера и бота
-    setup_dp(dp)
-    setup_bot(bot)
-
-    # Подключаем командный роутер
-    dp.include_router(command_router)
-
-    # Если настроен Webhook, то устанавливаем его
-    if settings.BOT_WEBHOOK_URL:
+    polling_task: asyncio.Task[None] | None = None
+    wh_info = await bot.get_webhook_info()
+    if settings.BOT_WEBHOOK_URL and wh_info.url != settings.BOT_WEBHOOK_URL:
         await bot.set_webhook(settings.BOT_WEBHOOK_URL)
+    else:
+        polling_task = asyncio.create_task(dp.start_polling(bot, handle_signals=False))
+
+    logger.info("Finished start")
     yield
 
-    # Удаляем webhook, если он был
-    await bot.delete_webhook()
-    await bot.session.close()
+    if polling_task is not None:
+        logger.info("Stopping polling...")
+        polling_task.cancel()
+        try:
+            await polling_task
+        except asyncio.CancelledError:
+            logger.info("Polling stopped")
 
-# Функция создания FastAPI приложения
+    while background_tasks:
+        await asyncio.sleep(0)
+
+    await bot.delete_webhook()
+
+    logger.info('Ending lifespan')
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(docs_url='/swagger')
-    app.include_router(v1_router, prefix='/v1', tags=['v1'])
+    app = FastAPI(docs_url='/swagger', lifespan=lifespan)
+    app.include_router(tg_router, prefix='/tg', tags=['tg'])
     return app
 
-# Функция для запуска polling
-async def start_polling() -> None:
-    dp = Dispatcher()
-    setup_dp(dp)
-    bot = Bot(token=settings.BOT_TOKEN)
-    setup_bot(bot)
-    dp.include_router(command_router)
-    
-    # Запуск polling для бота
-    await bot.delete_webhook()  # Удаляем webhook, если он есть
-    await dp.start_polling(bot)  # Запускаем polling
 
-# Запуск приложения с настройкой Webhook или Polling
-if __name__ == "__main__":
-    if settings.BOT_WEBHOOK_URL:
-        # Запуск FastAPI с webhook
-        uvicorn.run("src.app:create_app", factory=True, host="0.0.0.0", port=8000)
-    else:
-        # Запуск polling, если webhook не настроен
-        asyncio.run(start_polling())
+async def start_polling():
+    logging.config.dictConfig(LOGGING_CONFIG)
+
+    logger.info('Starting polling')
+
+    await bot.delete_webhook()
+
+    logging.error('Dependencies launched')
+    await dp.start_polling(bot)
+
+
+if __name__ == '__main__':
+    uvicorn.run('src.app:create_app', factory=True, host='0.0.0.0', port=8000, workers=1)
