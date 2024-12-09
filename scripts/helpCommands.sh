@@ -24,6 +24,9 @@ python3 -m uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8000
 # Удалять мусор
 # sudo find . -name '__pycache__' -type d -exec rm -rf {} +
 
+# Скачать модуль в poetry
+# python3 -m poetry add <module_name>
+
 # вывести древо проекта
 # tree -I '.vscode|.venv|.mypy_cache|__pycache__'
 

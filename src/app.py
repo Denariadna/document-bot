@@ -51,7 +51,7 @@ def create_app() -> FastAPI:
     return app
 
 
-async def start_polling():
+async def start_polling() -> None:
     logging.config.dictConfig(LOGGING_CONFIG)
 
     logger.info('Starting polling')
