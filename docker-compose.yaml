@@ -1,50 +1,44 @@
 version: '3.8'
 
 services:
-  bot:
-    container_name: telegram_bot
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"  # для webhook режима
-    env_file: ./src/config/.env
-    depends_on:
-      - postgres
-      - redis
-    volumes:
-      - .:/app
-    command: >
-      bash -c "
-        if [ $USE_WEBHOOK = 'true' ]; then
-          uvicorn src.main:app --host 0.0.0.0 --port 8000;
-        else
-          python src/main.py;
-        fi
-      "
-    environment:
-      USE_WEBHOOK: ${USE_WEBHOOK:-false}
-
-  postgres:
-    image: postgres:15-alpine
-    container_name: postgres_db
+  db:
+    image: postgres:13.2
     ports:
       - "5432:5432"
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    command: [ "postgres", "-c", "log_statement=all", "-c", "log_destination=stderr" ]
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres", "-d", "postgres" ]
+      interval: 1s
+      retries: 20
+    env_file:
+      - config/.env.db
+
+  bot:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    command: uvicorn src.app:create_app --factory --port 8001 --workers=1
+    ports:
+      - "8001:8001"
+
+  rabbitmq:
+    image: rabbitmq:3.13.7-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
 
   redis:
-    image: redis:7.0-alpine
-    container_name: redis_cache
+    image: redis:6.2.4
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
 
-volumes:
-  postgres_data:
-  redis_data:
+#  prometheus:
+#    image: prom/prometheus
+#    container_name: prometheus
+#    command:
+#      - "--config.file=/etc/prometheus/prometheus_config.yml"
+#    ports:
+#      - "9090:9090"
+#    restart: unless-stopped
+#    volumes:
+#      - ./prometheus:/etc/prometheus
