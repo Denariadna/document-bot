@@ -1,4 +1,6 @@
 from aiogram import types
+import logging
+logger = logging.getLogger(__name__)
 
 # Функция обработки команды /start
 async def start(message: types.Message) -> None:
@@ -9,12 +11,19 @@ async def help_command(message: types.Message)-> None:
     commands = (
         "/start - начать работу с ботом",
         "/help - показать доступные команды",
+        "/upload - загрузить файл",
+        "/download - скачать файл"
     )
     await message.reply("\n".join(commands))
 
 # Функция, которая просто повторяет сообщение пользователя
 async def echo(message: types.Message) -> None:
-    await message.answer(message.text)
+    logger.info(f"Получено сообщение: {message.text}")
+    if message.text:
+        await message.answer(message.text)
+    else:
+        logger.warning("Сообщение не содержит текста.")
+        await message.answer("Пожалуйста, отправьте текстовое сообщение.")
 
 
 
