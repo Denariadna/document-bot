@@ -14,6 +14,10 @@ python3 -m poetry lock # Заполнение poetry.lock
 docker compose up --build -d
 # docker kill $(docker ps -a -q)
 
+# docker compose down
+# docker compose build --no-cache
+# docker compose up
+
 # Запустить app.py (bot_polling)
 python3 -m src.app
 PYTHONPATH=. python3 -m src.app
@@ -21,6 +25,9 @@ PYTHONPATH=. python3 -m src.app
 
 # Запустить app.py (bot_webhook)
 python3 -m uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8000
+# command: poetry run uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8001 --workers=1
+
+
 # Удалять мусор
 # sudo find . -name '__pycache__' -type d -exec rm -rf {} +
 
