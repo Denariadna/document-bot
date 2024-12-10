@@ -11,6 +11,7 @@ from config.settings import settings
 from src.api.tg.router import router as tg_router
 from src.bg_tasks import background_tasks
 from src.bot import dp, bot
+from src.storage.minio_client import create_bucket
 
 from src.logger import LOGGING_CONFIG, logger
 
@@ -18,6 +19,8 @@ from src.logger import LOGGING_CONFIG, logger
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logging.config.dictConfig(LOGGING_CONFIG)
+    # Инициализируем MinIO bucket
+    create_bucket()
 
     polling_task: asyncio.Task[None] | None = None
     wh_info = await bot.get_webhook_info()

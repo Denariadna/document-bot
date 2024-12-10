@@ -18,6 +18,14 @@ docker compose up --build -d
 # docker compose build --no-cache
 # docker compose up
 
+# docker compose down --volumes
+# docker compose up --build -d
+
+# Проверить то что порт забит 
+# sudo lsof -i :5432
+# sudo systemctl stop postgresql
+
+
 # Запустить app.py (bot_polling)
 python3 -m src.app
 PYTHONPATH=. python3 -m src.app
@@ -33,6 +41,16 @@ python3 -m uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8000
 
 # Скачать модуль в poetry
 # python3 -m poetry add <module_name>
+
+wget https://dl.min.io/client/mc/release/linux-amd64/mc
+chmod +x mc
+sudo mv mc /usr/local/bin/
+mc alias set local http://localhost:9000 minioadmin minioadmin
+mc ls local
+
+# docker-compose down
+# docker-compose down -v
+
 
 # вывести древо проекта
 # tree -I '.vscode|.venv|.mypy_cache|__pycache__'
