@@ -42,11 +42,11 @@ python3 -m uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8000
 # Скачать модуль в poetry
 # python3 -m poetry add <module_name>
 
-wget https://dl.min.io/client/mc/release/linux-amd64/mc
-chmod +x mc
-sudo mv mc /usr/local/bin/
-mc alias set local http://localhost:9000 minioadmin minioadmin
-mc ls local
+# wget https://dl.min.io/client/mc/release/linux-amd64/mc
+# chmod +x mc
+# sudo mv mc /usr/local/bin/
+# mc alias set local http://localhost:9000 minioadmin minioadmin
+# mc ls local
 
 # docker-compose down
 # docker-compose down -v

@@ -5,6 +5,7 @@
 #Secrets
 config/.env
 src/config/.env
+config/.env.db
 
 #Temp
 venv

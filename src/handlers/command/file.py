@@ -1,7 +1,7 @@
 from aiogram import types
 from src.storage.minio_client import upload_file, get_file_path
 from src.storage.db import async_session
-from src.model.file import FileRecord
+from src.model.meta import FileRecord
 
 async def upload(message: types.Message) -> None:
     from src.bot import bot  # Отложенный импорт экземпляра бота

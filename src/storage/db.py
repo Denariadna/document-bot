@@ -6,9 +6,6 @@ from sqlalchemy.orm import declarative_base
 from typing_extensions import AsyncGenerator
 from config.settings import settings
 
-# Базовый класс для моделей
-Base = declarative_base()
-
 class CConnection(Connection):
     def _get_unique_id(self, prefix: str) -> str:
         return f'__asyncpg_{prefix}_{uuid4()}__'
