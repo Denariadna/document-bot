@@ -12,7 +12,8 @@ async def help_command(message: types.Message)-> None:
         "/start - начать работу с ботом",
         "/help - показать доступные команды",
         "/upload - загрузить файл",
-        "/download - скачать файл"
+        "/show_files - скачать файл",
+        "/check_state - проверить состояние"
     )
     await message.reply("\n".join(commands))
 
