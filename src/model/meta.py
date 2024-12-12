@@ -3,7 +3,7 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.schema import MetaData
 
 from sqlalchemy.orm import Mapped, mapped_column
-from datetime import datetime
+# from datetime import datetime
 
 # Recommended naming convention used by Alembic, as various different database
 # providers will autogenerate vastly different names making migrations more
@@ -48,4 +48,4 @@ class FileRecord(Base):
     file_name: Mapped[str] = mapped_column(index=True)
     file_path: Mapped[str] = mapped_column(index=True)
     file_exention: Mapped[str] = mapped_column(index=True)
-    created_at : Mapped[str] = mapped_column(index=True, default=datetime.utcnow)
+    # created_at : Mapped[str] = mapped_column(index=True, default=datetime.utcnow)
