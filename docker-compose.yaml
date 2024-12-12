@@ -49,13 +49,13 @@ services:
     ports:
       - "6379:6379"
 
-  bot:
-    build:
-      dockerfile: Dockerfile
-      context: .
-    command: poetry run uvicorn src.app:create_app --factory --port 8000 --workers=1
-    ports:
-      - "8000:8000"
+  # bot:
+  #   build:
+  #     dockerfile: Dockerfile
+  #     context: .
+  #   command: poetry run uvicorn src.app:create_app --factory --port 8000 --workers=1
+  #   ports:
+  #     - "8000:8000"
 
   # rabbitmq:
   #   image: rabbitmq:3.13.7-management
