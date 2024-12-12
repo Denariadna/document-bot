@@ -12,6 +12,7 @@ from src.api.tg.router import router as tg_router
 from src.bg_tasks import background_tasks
 from src.bot import dp, bot
 from src.storage.minio_client import create_bucket
+from src.api.minio.minio import router as minio_router
 
 from src.logger import LOGGING_CONFIG, logger
 
@@ -49,8 +50,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(docs_url='/swagger', lifespan=lifespan)
+    app = FastAPI(docs_url='/swagger', lifespan=lifespan, title="Document Bot")
     app.include_router(tg_router, prefix='/tg', tags=['tg'])
+    app.include_router(minio_router, prefix="/api/minio")
     return app
 
 
