@@ -1,1 +1,1 @@
-# Этот файл позволяет Python распознавать src как модуль
+from .settings import *

@@ -1,10 +1,12 @@
-FROM python:3.12-slim
+FROM python:3.11
 
-WORKDIR /app
+WORKDIR code
 
-COPY poetry.lock pyproject.toml /app/
-RUN pip install poetry && poetry config virtualenvs.create false && poetry install
+COPY . .
 
-COPY ./src /app/src
+RUN pip3 install --upgrade  poetry==1.8.3
 
-CMD ["poetry", "run", "python", "src/main.py"]
+RUN python3 -m poetry config virtualenvs.create false \
+    && python3 -m poetry install --no-interaction --no-ansi --without dev \
+    && echo yes | python3 -m poetry cache clear . --all
+

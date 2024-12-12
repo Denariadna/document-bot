@@ -18,6 +18,13 @@ class Settings(BaseSettings):
 
     REDIS_HOST: str
     REDIS_PORT: str
+    
+    # Добавляем MinIO настройки
+    MINIO_URL: str = "http://localhost:9000"
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_BUCKET_NAME: str = "documents"
+
 
     USER_GIFT_QUEUE_TEMPLATE: str = 'user_gifts.{user_id}'
 

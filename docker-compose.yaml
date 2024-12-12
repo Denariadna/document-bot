@@ -1,36 +1,67 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:13.2
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: document_bot
     ports:
       - "5432:5432"
-    command: [ "postgres", "-c", "log_statement=all", "-c", "log_destination=stderr" ]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "postgres", "-d", "postgres" ]
-      interval: 1s
-      retries: 20
-    env_file:
-      - config/.env.db
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
 
-  bot:
-    build:
-      dockerfile: Dockerfile
-      context: .
-    command: uvicorn src.app:create_app --factory --port 8001 --workers=1
-    ports:
-      - "8001:8001"
 
-  rabbitmq:
-    image: rabbitmq:3.13.7-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+  # db:
+  #   image: postgres:13.2
+  #   ports:
+  #     - "5432:5432"
+  #   command: [ "postgres", "-c", "log_statement=all", "-c", "log_destination=stderr" ]
+  #   healthcheck:
+  #     test: [ "CMD", "pg_isready", "-U", "postgres", "-d", "postgres" ]
+  #     interval: 1s
+  #     retries: 20
+  #   env_file:
+  #     - config/.env.db
 
   redis:
     image: redis:6.2.4
     ports:
       - "6379:6379"
+
+  # bot:
+  #   build:
+  #     dockerfile: Dockerfile
+  #     context: .
+  #   command: poetry run uvicorn src.app:create_app --factory --port 8000 --workers=1
+  #   ports:
+  #     - "8000:8000"
+
+  # rabbitmq:
+  #   image: rabbitmq:3.13.7-management
+  #   ports:
+  #     - "5672:5672"
+  #     - "15672:15672"
 
 #  prometheus:
 #    image: prom/prometheus
@@ -42,3 +73,7 @@ services:
 #    restart: unless-stopped
 #    volumes:
 #      - ./prometheus:/etc/prometheus
+
+volumes:
+  postgres_data:
+  minio_data:
