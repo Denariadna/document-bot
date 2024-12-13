@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from sqlalchemy.future import select
 from src.storage.minio_client import upload_file
 from src.storage.db import async_session
-from src.model.meta import FileRecord
+from src.model.file import FileRecord
 from src.logger import logger  # Импорт логгера
 from src.handlers.states.file import FileStates
 
