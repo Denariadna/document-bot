@@ -36,6 +36,8 @@ async def show_files(message: types.Message) -> None:
         )
         files = result.scalars().all()
 
+    logger.info("Пользователь загрузил следующие файлы: %s", files)
+
     if not files:
         await message.reply("У вас нет загруженных файлов.")
         return
@@ -46,4 +48,5 @@ async def show_files(message: types.Message) -> None:
             for file in files
         ]
     )
+    
     await message.reply("Ваши файлы:", reply_markup=keyboard)

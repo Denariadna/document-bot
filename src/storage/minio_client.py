@@ -53,3 +53,7 @@ def get_file_path(file_name: str) -> str:
         str: Подписанный URL для доступа к файлу.
     """
     return minio_client.presigned_get_object(settings.MINIO_BUCKET_NAME, file_name)
+
+async def download_file(minio_path: str, local_path: str) -> None:
+    """Скачивает файл из MinIO."""
+    minio_client.fget_object(settings.MINIO_BUCKET_NAME, minio_path, local_path)

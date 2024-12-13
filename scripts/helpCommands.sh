@@ -61,8 +61,8 @@ sudo systemctl restart nginx
 # mc alias set local http://localhost:9000 minioadmin minioadmin
 # mc ls local
 
-# docker-compose down
-# docker-compose down -v
+# docker compose down
+# docker compose down -v
 
 
 # вывести древо проекта

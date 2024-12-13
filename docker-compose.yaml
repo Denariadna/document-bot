@@ -30,20 +30,16 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
-    networks:
-      - app_network
 
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    ports:
-      - "80:80"
-    depends_on:
-      - minio
-    networks:
-      - app_network
+  # nginx:
+  #   image: nginx:latest
+  #   container_name: nginx
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #   ports:
+  #     - "80:80"
+  #   depends_on:
+  #     - minio
 
 
   # db:
@@ -72,10 +68,8 @@ services:
       - "8000:8000"
     volumes:
       - ./src:/app
-    depends_on:
-      - minio
-    networks:
-      - app_network
+    # depends_on:
+    #   - minio
 
   # rabbitmq:
   #   image: rabbitmq:3.13.7-management
@@ -97,7 +91,3 @@ services:
 volumes:
   postgres_data:
   minio_data:
-
-networks:
-  app_network:
-    driver: bridge
