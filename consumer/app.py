@@ -15,7 +15,7 @@ async def start_consumer() -> None:
     logger.info('Starting consumer...')
 
     queue_name = "test_queue"
-    async with rabbit.channel_pool.acquire() as channel:  # type: aio_pika.Channel
+    async with rabbit.channel_pool.acquire() as channel:  # aio_pika.Channel
 
         # Will take no more than 10 messages in advance
         await channel.set_qos(prefetch_count=10) # TODO почитать
@@ -25,9 +25,12 @@ async def start_consumer() -> None:
 
         logger.info('Consumer started!')
         async with queue.iterator() as queue_iter:
-            async for message in queue_iter: # type: aio_pika.Message
+            async for message in queue_iter: # aio_pika.Message
                 TOTAL_RECEIVED_MESSAGES.inc()
-                async with message.process():  # после выхода из with будет ack (есть еще no_ack)
+                async with message.process():  
+                    if message.correlation_id is None: 
+                        logger.error("Message has no correlation_id")
+                        return # после выхода из with будет ack (есть еще no_ack)
                     correlation_id_ctx.set(message.correlation_id)
 
                     body: GiftMessage = msgpack.unpackb(message.body)
@@ -36,15 +39,3 @@ async def start_consumer() -> None:
                     if body.get('event') == 'gift':
                         await handle_event_gift(body)
 
-
-# Возможно более понятный код вида консмура
-# queue: Queue
-# while True:
-#     message = await queue.get()
-#     async with message.process():  # после выхода из with будет ack (есть еще no_ack)
-#         correlation_id_ctx.set(message.correlation_id)
-#         logger.info("Message ...")
-#
-#         body: GiftMessage = msgpack.unpackb(message.body)
-#         if body['event'] == 'gift':
-#             await handle_event_gift(body)

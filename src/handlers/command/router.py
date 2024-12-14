@@ -1,7 +1,9 @@
 from aiogram import Router, types
 from aiogram.filters import Command
-from .start import start, echo, help_command
+from aiogram.types import ContentType
+from .start import start, help_command
 from .file import initiate_upload, show_files, check_state
+from src.logger import logger
 
 router = Router()
 
@@ -11,4 +13,9 @@ router.message.register(initiate_upload, Command("upload"))
 router.message.register(show_files, Command("show_files"))
 router.message.register(check_state, Command("check_state"))
 router.message.register(help_command, Command("help"))
-# router.message.register(echo)
+
+# Обработчик для текстовых сообщений, которые не обрабатываются другими
+@router.message(lambda message: message.content_type == ContentType.TEXT)
+async def echo(message: types.Message) -> None:
+    logger.warning("Необработанное текстовое сообщение.")
+    await message.answer("Пожалуйста, отправьте корректный запрос.")

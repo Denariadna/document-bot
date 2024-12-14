@@ -19,6 +19,8 @@ from src.api.minio.minio import router as minio_router
 
 from src.logger import LOGGING_CONFIG, logger
 
+from src.storage.rabbit import channel_pool
+from aio_pika import ExchangeType, Channel
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -26,7 +28,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Инициализируем MinIO bucket
     create_bucket()
     
-    # Инициализируем общюю очередь для передачи сообщений
+    # Инициализируем общую очередь для передачи сообщений
+    async with channel_pool.acquire() as channel: 
+        exchange = await channel.declare_exchange("user_gifts", ExchangeType.TOPIC, durable=True)
+
+        users_queue = await channel.declare_queue(
+            'user_messages',
+            durable=True,
+        )
+
+        # Binding queue
+        await users_queue.bind(
+            exchange,
+            'user_messages'
+        )
+
 
     polling_task: asyncio.Task[None] | None = None
     wh_info = await bot.get_webhook_info()

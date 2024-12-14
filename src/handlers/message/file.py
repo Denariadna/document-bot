@@ -16,14 +16,15 @@ async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
     """
     Обрабатывает файл, если состояние пользователя ожидает файл.
     """
-    if message.from_user is None:
-        logger.error("Ошибка: сообщение не содержит информации об отправителе (from_user = None).")
-        return
 
     # Проверяем текущее состояние пользователя
     current_state = await state.get_state()
 
     if current_state == FileStates.waiting_for_file.state:
+        if message.from_user is None:
+            logger.error("Ошибка: сообщение не содержит информации об отправителе (from_user = None).")
+            return
+
         # Если ожидается файл
         if not message.document:
             await message.reply("Пожалуйста, отправьте файл.")
