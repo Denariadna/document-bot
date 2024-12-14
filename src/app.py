@@ -25,6 +25,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logging.config.dictConfig(LOGGING_CONFIG)
     # Инициализируем MinIO bucket
     create_bucket()
+    
+    # Инициализируем общюю очередь для передачи сообщений
 
     polling_task: asyncio.Task[None] | None = None
     wh_info = await bot.get_webhook_info()

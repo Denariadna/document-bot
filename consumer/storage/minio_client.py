@@ -2,8 +2,6 @@ from minio import Minio
 from minio.error import S3Error
 from config.settings import settings
 from io import BytesIO
-from src.logger import logger
-import io
 
 # Инициализация Minio клиента
 minio_client = Minio(
@@ -56,29 +54,6 @@ def get_file_path(file_name: str) -> str:
     """
     return minio_client.presigned_get_object(settings.MINIO_BUCKET_NAME, file_name)
 
-async def download_file(minio_path: str) -> io.BytesIO:
-    """
-    Скачивает файл из MinIO и возвращает его в виде объекта BytesIO.
-
-    Args:
-        minio_path (str): Путь к файлу в MinIO.
-
-    Returns:
-        io.BytesIO: Содержимое файла.
-    """
-    try:
-        # Получаем объект из MinIO
-        response = minio_client.get_object(settings.MINIO_BUCKET_NAME, minio_path)
-
-        # Читаем содержимое в BytesIO
-        file_bytes = io.BytesIO(response.read())
-        file_bytes.seek(0)
-
-        # Освобождаем ресурсы MinIO
-        response.close()
-        response.release_conn()
-
-        return file_bytes
-    except Exception as e:
-        logger.error(f"Ошибка при загрузке файла {minio_path} из MinIO: {e}")
-        raise
+async def download_file(minio_path: str, local_path: str) -> None:
+    """Скачивает файл из MinIO."""
+    minio_client.fget_object(settings.MINIO_BUCKET_NAME, minio_path, local_path)

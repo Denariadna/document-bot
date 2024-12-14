@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     MINIO_BUCKET_NAME: str = "documents"
 
 
-    USER_GIFT_QUEUE_TEMPLATE: str = 'user_gifts.{user_id}'
+    # USER_GIFT_QUEUE_TEMPLATE: str = 'user_gifts.{user_id}'
 
     @property
     def db_url(self) -> str:
