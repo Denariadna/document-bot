@@ -1,5 +1,7 @@
 import logging.config
 from contextlib import suppress
+from contextvars import ContextVar
+
 
 import yaml
 from starlette_context import context
@@ -18,5 +20,6 @@ class ConsoleFormatter(logging.Formatter):
 
         return super().format(record)
 
+correlation_id_ctx: ContextVar[str] = ContextVar('correlation_id')
 
 logger = logging.getLogger('backend_logger')

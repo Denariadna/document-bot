@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 
 class FileMessage(BaseModel):
-    id: int
-    user_id: str
+    user_id: int
     action: str

@@ -45,8 +45,6 @@ services:
       - "8000:8000"
     volumes:
       - ./src:/app
-    # depends_on:
-    #   - minio
 
   rabbitmq:
     image: rabbitmq:3.13.7-management

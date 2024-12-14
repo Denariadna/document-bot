@@ -1,12 +1,11 @@
 import logging.config
 
-import aio_pika
 import msgpack
 
-from consumer.handlers.gift import handle_event_gift
+from consumer.handlers.file import show_files
 from consumer.logger import LOGGING_CONFIG, logger, correlation_id_ctx
 from consumer.metrics import TOTAL_RECEIVED_MESSAGES
-from consumer.schema.gift import GiftMessage
+from consumer.schema.file import FileMessage
 from consumer.storage import rabbit
 
 
@@ -14,7 +13,7 @@ async def start_consumer() -> None:
     logging.config.dictConfig(LOGGING_CONFIG)
     logger.info('Starting consumer...')
 
-    queue_name = "test_queue"
+    queue_name = "user_messages"
     async with rabbit.channel_pool.acquire() as channel:  # aio_pika.Channel
 
         # Will take no more than 10 messages in advance
@@ -28,14 +27,18 @@ async def start_consumer() -> None:
             async for message in queue_iter: # aio_pika.Message
                 TOTAL_RECEIVED_MESSAGES.inc()
                 async with message.process():  
-                    if message.correlation_id is None: 
-                        logger.error("Message has no correlation_id")
-                        return # после выхода из with будет ack (есть еще no_ack)
+                    # if message.correlation_id is None: 
+                    #     logger.error("Message has no correlation_id")
+                    #     return # после выхода из with будет ack (есть еще no_ack)
                     correlation_id_ctx.set(message.correlation_id)
 
-                    body: GiftMessage = msgpack.unpackb(message.body)
+                    body: FileMessage = msgpack.unpackb(message.body)
                     logger.info("Message: %s", body)
-
-                    if body.get('event') == 'gift':
-                        await handle_event_gift(body)
+                    logger.info("Message correlation_id: %s", message.correlation_id)
+                    logger.info("Message correlation_id: %s", correlation_id_ctx.get())
+                    logger.info("Message correlation_id: %s", body['user_id'])
+                    
+                    
+                    if body['action'] == 'show_files_user':
+                        await show_files(body)
 
