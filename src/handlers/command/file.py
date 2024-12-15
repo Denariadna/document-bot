@@ -1,11 +1,15 @@
 from aiogram import types
 from aiogram.fsm.context import FSMContext
-from sqlalchemy.future import select
-from src.storage.minio_client import upload_file
-from src.storage.db import async_session
-from src.model.meta import FileRecord
-from src.logger import logger  # Импорт логгера
+import msgpack
+import aio_pika
+from aio_pika import ExchangeType
+from src.schema.file import FileMessage
+from src.storage.rabbit import channel_pool
+from src.logger import logger
 from src.handlers.states.file import FileStates
+from starlette_context.header_keys import HeaderKeys
+from starlette_context import context
+
 
 async def initiate_upload(message: types.Message, state: FSMContext) -> None:
     if message.from_user is None:
@@ -22,28 +26,26 @@ async def check_state(message: types.Message, state: FSMContext) -> None:
     await message.reply(f"Текущее состояние: {current_state or 'Нет состояния'}")
 
 async def show_files(message: types.Message) -> None:
-    """Показать файлы пользователя."""
-    from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-
+    """Кладёт информацию о пользователе в очередь."""
     if message.from_user is None:
         logger.error("Ошибка: сообщение не содержит информации об отправителе (from_user = None).")
         return
 
-    user_id = message.from_user.id
-    async with async_session() as db:
-        result = await db.execute(
-            select(FileRecord.file_name).where(FileRecord.user_id == user_id)
+    # Подключаемся к очереди через пул каналов
+    async with channel_pool.acquire() as channel:
+        # Объявляем обменник и очередь
+        exchange = await channel.declare_exchange("user_files", ExchangeType.TOPIC, durable=True)
+        queue = await channel.declare_queue('user_messages', durable=True)
+        await queue.bind(exchange, 'user_messages')
+
+        await exchange.publish(
+            aio_pika.Message( 
+                msgpack.packb(FileMessage(
+                    user_id=message.from_user.id,
+                    action="show_files_user"
+                ).model_dump()),
+                correlation_id=context.get(HeaderKeys.correlation_id, None),
+            ),
+            
+            routing_key='user_messages'
         )
-        files = result.scalars().all()
-
-    if not files:
-        await message.reply("У вас нет загруженных файлов.")
-        return
-
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=file, callback_data=f"file:{file}")]
-            for file in files
-        ]
-    )
-    await message.reply("Ваши файлы:", reply_markup=keyboard)

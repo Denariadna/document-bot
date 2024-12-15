@@ -32,8 +32,21 @@ PYTHONPATH=. python3 -m src.app
 
 
 # Запустить app.py (bot_webhook)
-python3 -m uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8000
-# command: poetry run uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8001 --workers=1
+# python3 -m uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8000
+poetry run uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8001 --workers=1
+
+sudo lsof -i :80
+sudo lsof -i :9000
+sudo lsof -i :9001
+sudo lsof -i :5432
+sudo lsof -i :6379
+sudo lsof -i :8000
+
+chmod +x scripts/cleanup_ports.sh
+./scripts/cleanup_ports.sh
+
+sudo systemctl status nginx
+sudo systemctl restart nginx
 
 
 # Удалять мусор
@@ -48,8 +61,8 @@ python3 -m uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8000
 # mc alias set local http://localhost:9000 minioadmin minioadmin
 # mc ls local
 
-# docker-compose down
-# docker-compose down -v
+# docker compose down
+# docker compose down -v
 
 
 # вывести древо проекта

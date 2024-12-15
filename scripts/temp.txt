@@ -1,483 +1,504 @@
-в общем начнем с того что нужно сделать релизацию того что пользователь кидает команду /upload и в ответ на нее записывается состояние в редис (со свойством durable) в этом состоянием бот в следующем сообщении ждет от конкретного пользователя файл, после того как в следующем сообщении пользователь кинул файл, файл положился в минио, тот вернул path на файл, который в свою очерерь положилься вместе с user_id, и расширением файла в посдгриес, потом пользователь может сделать команду /show_file и покажуться все файлы которые он положил ( в идеале нужно сделать так чтобы был какойто выбор из типов файлов например pdf / txt / docs, а уже в отвте на нажатие кнопки выводяться все файлы которые к этому юсеру и с этим расширением) Далее из списка пользователь может выбрать файл и бот ему его пришлет
-Это то что нужно решить, мне нужен код который не будет нарушать текущюю структуру проекта в нее можно добавлять файлы и катологи и так же изменять текущий код, только учти что зависимости у меня лежат в config/settings, а так же учитывай что многое что ты захочешь поднять с нулю у меня уже есть напрммер конект к бд или поднятие бота, если им чего то не хватает ты скажи но не пиши что создаем нового бота сюда вставить токен, так же мне нужен полный код который решит всю задачу целиком и это будет рабочий хороший код, можешь не переживать за место и писать много и качественно расписывая каждый файл и чтобы у тебя было получше представление об прокте, я сброшу тебе часть файлов и структуру 
+у меня почему то при отправлении продюсера в реббит, он не может отправить ccorrelation_id как его и откуда получить (вообще он генериться но не понятно откуда и как то настроить) консюмер не видит correlation_id что делать??
 
-----------
-я завел новый чат с тобой чтобы не засорять старые, давай начнем еще раз и дальше продолжим работать, 
-это общее задание которое нужно реализовать
-# Тема: Бот для документа-хранения 
+вот файлы конфигурации л
 
-## Задание:
-   - пользователь для который будет управлять документами
-   - меню
-     - добавить документ 
-       - после нажатия диалог с помощью которого можно добавить тип документа, его название
-     - показать документы
-       - первым на выбор идут типы документов (в разрезе типа может быть много объектов)
-       - после нажатия на тип, сам выбор документа
+моя цель создать бот для хранения документов, тоесть пользователь сохраняет у меня файлы а потом может получить их обратно
 
-## Требования к проекту: 
-- Упаковка проекта в докер-компоуз и запуск через docker compose up без дополнительной настройки
-- Два формата запуска - через polling и через webhook
-- прохождение flake8 + mypy в соответствии с конфигурациями проекта
-- Стейт отдельный под каждого пользователя
-- Без доступа к бд в сервисе aiogram (с бд работает только консюмер(exchange))
-- Метрики: 
-  - Время выполнения всех интеграционных методов (запросы на бекенд и телеграм)
-  - Иметь свой декоратор для обертки таких методов. Использовать Histogram для подсчета времени
-  - Сделать свою middleware для подсчета rps на сервис
-  - Сделать счетчик отправленных из бота сообщений в очередь и полученных сообщений консумером 
-- Настройки в env
-- Без дублирования кода
-- poetry как сборщик пакетов
-- Обработка ошибок и соответствующие ответы от бота
-- Обработка флуда
-- В README.md ожидается увидеть как что работает, чтобы можно было ознакомиться проще с проектом
-- Сквозное логирование
-- Если в сервисе используется хранилище s3(minio), то для этого сделать отдельную ручку. Можно использовать nginx
-- Обратить внимание на индексацию в моделях, подумать об unique_constraint
+в общем передомной стоит задача разделить сервис (который находиться в src) , и создать дополнительный сервис consumer, нужно вынести работу с посгрис (а также частично работу с минио, тольлько выгрузку файлов и потом от туда же кидать в бота) все это должно быть настроенно через rebbitMQ,  я скину тебе код, вначале того что в src (это рабочий код но только на одном серевеере работает нужно отключить сервер, потом того что в консюмере (то что в консюмере это пример другого проекта, но нужно примерно такое только с моей задачей)
 
-## Архитектура проекта:
-      (сохраняет статус в redis)
-телеграмм => бекенд => aiogram => rabbitmq => s3(minio)
-  (через пуллинг или вебхук)
-                      (сохраняем в minio)  
-на всех этапах должно быть сохранено логирование и метрики написанные на промитеусе
+src/storege/rebbit (используем для подключений к реббиту)
+import aio_pika
+from aio_pika import Channel, connect_robust
+from aio_pika.abc import AbstractRobustConnection
+from aio_pika.pool import Pool
+
+from typing import cast
+
+from config.settings import settings
 
 
-в общем не нужно 
-в общем твой код не работает, потому что ты заново создаешь бота, используешь неверные пути и тд
+async def get_connection() -> AbstractRobustConnection:
+    return await aio_pika.connect_robust(settings.rabbit_url)
 
-просто учитывай что у меня уже есть код сейчас я его тебе скину  и отредактируй его так чтобы вот это задаение выполнялось
+connection_pool: Pool[AbstractRobustConnection] = Pool(get_connection, max_size=2)
 
-а теперь четко распиши, что и куда нужно добавить, чтобы не нарушить нынешнюю структуру проекта. Если нужно расписать какие-то файлы, скажи (.venv) daniil@laptop:~/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot$ tree -I '.vscode|.venv|.mypy_cache|__pycache__' . ├── config │ ├── __init__.py │ ├── logging.conf.yml │ └── settings.py ├── docker-compose.yaml ├── Dockerfile ├── poetry.lock ├── pyproject.toml ├── README.md ├── README_Task.md ├── скрипты │ ├── helpCommands.sh │ ├── migrate.py │ └── startup.sh ├── src │ ├── api │ │ ├── __init__.py │ │ ├── tg │ │ │ ├── __init__.py │ │ │ ├── router.py │ │ │ └── webhook.pypy │ │ └── v1 │ │ ├── auth │ │ │ ├── info.py │ │ │ ├── __init__.py │ │ │ ├── login.py │ │ │ └── router.py │ │ ├── home.py │ │ ├── __init__.py │ │ └── router.py │ ├── app.py │ ├── auth │ │ ├── __init__.py │ │ └── validator.py │ ├── bg_tasks.py │ ├── bot.py │ ├── handlers │ │ ├── buttons.pypy │ │ ├── callback │ │ │ ├── gift.py │ │ │ ├── __init__.py │ │ │ ├── router.py │ │ │ └── test.pypy │ │ ├── команда │ │ │ ├── файл.пы │ │ │ ├── __init__.py │ │ │ ├── router.py │ │ │ └── start.py │ │ ├── __init__.py │ │ ├── сообщении │ │ │ ├── gift.py │ │ │ ├── __init__.py │ │ │ └── router.py │ │ ├── промежуточного │ │ │ ├── auth.py │ │ │ └── __init__.py │ │ └── государств │ │ ├── auth.py │ │ ├── gift.py │ │ └── __init__.py │ ├── __init__.py │ ├── logger.py │ ├── моделью │ │ ├── файла.py │ │ ├── __init__.py │ │ ├── log.py │ │ ├── meta.py │ │ └── user.py │ ├── схема │ │ ├── файл.py │ │ ├── __init__.py │ │ └── login.py │ └── storage │ ├── db.py │ ├── __init__.py │ └── minio_client.py ├── test-minio.py └── test-postgries.py 18 каталогов, 61 файл. Ты можешь добавлять дополнительные файлы и папки, если потребуется. А теперь подробно распиши, куда и какой файл нужно вставить, чтобы всё заработало, и какие будут дальнейшие шаги для реализации проекта. 
 
-command/file
+async def get_channel() -> Channel:
+    async with connection_pool.acquire() as connection:
+        return cast(Channel, await connection.channel())
+
+
+channel_pool: Pool[Channel] = Pool(get_channel, max_size=10)
+
+minio_client.py
+from minio import Minio
+from minio.error import S3Error
+from config.settings import settings
+from io import BytesIO
+
+# Инициализация Minio клиента
+minio_client = Minio(
+    settings.MINIO_URL.replace("http://", "").replace("https://", ""),
+    access_key=settings.MINIO_ACCESS_KEY,
+    secret_key=settings.MINIO_SECRET_KEY,
+    secure=False,
+)
+
+def create_bucket() -> None:
+    """
+    Создает бакет, если он не существует.
+    """
+    if not minio_client.bucket_exists(settings.MINIO_BUCKET_NAME):
+        minio_client.make_bucket(settings.MINIO_BUCKET_NAME)
+
+def upload_file(user_id: int, file_name: str, file_data: bytes) -> str:
+    """
+    Загружает файл в MinIO.
+
+    Args:
+        user_id (int): ID пользователя.
+        file_name (str): Имя файла.
+        file_data (bytes): Данные файла.
+
+    Returns:
+        str: Уникальное имя файла в бакете.
+    """
+    unique_name = f"{user_id}_{file_name}"
+    # Оборачиваем данные в BytesIO
+    file_stream = BytesIO(file_data)
+    minio_client.put_object(
+        bucket_name=settings.MINIO_BUCKET_NAME,
+        object_name=unique_name,
+        data=file_stream,
+        length=len(file_data),
+        content_type="application/octet-stream"
+    )
+    return unique_name
+
+def get_file_path(file_name: str) -> str:
+    """
+    Возвращает временный URL для доступа к файлу.
+
+    Args:
+        file_name (str): Имя файла в бакете.
+
+    Returns:
+        str: Подписанный URL для доступа к файлу.
+    """
+    return minio_client.presigned_get_object(settings.MINIO_BUCKET_NAME, file_name)
+
+async def download_file(minio_path: str, local_path: str) -> None:
+    """Скачивает файл из MinIO."""
+    minio_client.fget_object(settings.MINIO_BUCKET_NAME, minio_path, local_path)
+
+src/handlers/command/file (нужно будет логику которая отвечает за работу с постгрисом поменять и настроить так чтобы эта задача пошла в консумер, незнаю как лучше ну ты придумай что нибудь)
 from aiogram import types
-from src.storage.minio_client import upload_file, get_file_path
+from aiogram.fsm.context import FSMContext
+from sqlalchemy.future import select
+from src.storage.minio_client import upload_file
 from src.storage.db import async_session
 from src.model.file import FileRecord
+from src.logger import logger  # Импорт логгера
+from src.handlers.states.file import FileStates
 
-async def upload(message: types.Message) -> None:
-    from src.bot import bot  # Отложенный импорт экземпляра бота
-
-    if not message.document:
-        await message.reply("Пожалуйста, отправьте файл.")
+async def initiate_upload(message: types.Message, state: FSMContext) -> None:
+    if message.from_user is None:
+        logger.error("Ошибка: сообщение не содержит информации об отправителе (from_user = None).")
         return
 
-    document = message.document
-    file_info = await bot.get_file(document.file_id)  # Получаем информацию о файле
-    file_bytes = await bot.download_file(str(file_info.file_path))  # Скачиваем файл
+    # Устанавливаем состояние через FSMContext
+    await state.set_state(FileStates.waiting_for_file)
+    await message.reply("Отправьте файл, который хотите загрузить.")
 
-    if message.from_user is not None:
-        user_id = message.from_user.id
-    else:
-        raise ValueError("user_id is None, cannot upload file")
 
-    if document.file_name is None:
-        file_name = "unknown_file_name"  # Обработка случая отсутствия имени файла
-    else:
+async def check_state(message: types.Message, state: FSMContext) -> None:
+    current_state = await state.get_state()
+    await message.reply(f"Текущее состояние: {current_state or 'Нет состояния'}")
 
-db.py
-from uuid import uuid4
-from asyncpg import Connection
-from sqlalchemy import NullPool
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import declarative_base
-from typing_extensions import AsyncGenerator
-from config.settings import settings
+async def show_files(message: types.Message) -> None:
+    """Показать файлы пользователя."""
+    from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-class CConnection(Connection):
-    def _get_unique_id(self, prefix: str) -> str:
-        return f'__asyncpg_{prefix}_{uuid4()}__'
 
-def create_engine() -> AsyncEngine:
-    return create_async_engine(
-        settings.db_url,
-        poolclass=NullPool,
-        connect_args={
-            'connection_class': CConnection,
-            'statement_cache_size': 0,
-            'prepared_statement_cache_size': 0,
-        },
-    )
 
-def create_session(_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
-    return async_sessionmaker(
-        bind=_engine,
-        class_=AsyncSession,
-        autoflush=False,
-        expire_on_commit=False,
-    )
+    if message.from_user is None:
+        logger.error("Ошибка: сообщение не содержит информации об отправителе (from_user = None).")
+        return
 
-engine = create_engine()
-async_session = create_session(engine)
-
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    user_id = message.from_user.id
     async with async_session() as db:
-        yield db
+        result = await db.execute(
+            select(FileRecord.file_name).where(FileRecord.user_id == user_id)
+        )
+        files = result.scalars().all()
 
-minio_client.py
-from minio import Minio
-from minio.error import S3Error
-from config.settings import settings
-from io import BytesIO
+    logger.info("Пользователь загрузил следующие файлы: %s", files)
 
-# Инициализация Minio клиента
-minio_client = Minio(
-    settings.MINIO_URL.replace("http://", "").replace("https://", ""),
-    access_key=settings.MINIO_ACCESS_KEY,
-    secret_key=settings.MINIO_SECRET_KEY,
-    secure=False,
-)
+    if not files:
+        await message.reply("У вас нет загруженных файлов.")
+        return
 
-def create_bucket() -> None:
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=file, callback_data=f"file:{file}")]
+            for file in files
+        ]
+    )
+    
+    await message.reply("Ваши файлы:", reply_markup=keyboard)
+
+src/hendlers/command/start (здесь нужно как я понимаю настраивать подключение к QUEUE 
+примерный код)
+@router.message(Command('start'))
+async def start_cmd(message: Message, state: FSMContext) -> None:
+    await state.set_data({})
+    await state.get_data()
+
+    await state.set_state(AuthGroup.authorized)
+    await state.get_state()
+    async with channel_pool.acquire() as channel:  # type: aio_pika.Channel
+        exchange = await channel.declare_exchange("user_gifts", ExchangeType.TOPIC, durable=True)
+
+        queue = await channel.declare_queue(
+            settings.USER_GIFT_QUEUE_TEMPLATE.format(
+                user_id=message.from_user.id,
+            ),
+            durable=True,
+        )
+
+        users_queue = await channel.declare_queue(
+            'user_messages',
+            durable=True,
+        )
+
+        # Binding queue
+        await queue.bind(
+            exchange,
+            settings.USER_GIFT_QUEUE_TEMPLATE.format(
+                user_id=message.from_user.id,
+            ),
+        )
+        # Binding queue
+        await users_queue.bind(
+            exchange,
+            'user_messages'
+        )
+
+        await exchange.publish(
+            aio_pika.Message(
+                msgpack.packb(
+                    GiftMessage(
+                        user_id=message.from_user.id,
+                        action='get_gifts',
+                        event='gift'
+                    )
+                ),
+                # correlation_id=context.get(HeaderKeys.correlation_id)
+            )
+            ,
+            'user_messages'
+        )
+
+тот код который есть сейчас
+from aiogram import types
+import logging
+logger = logging.getLogger(__name__)
+
+# Функция обработки команды /start
+async def start(message: types.Message) -> None:
+    await message.reply("Урааааааа")
+
+# функция обработки команды /help
+async def help_command(message: types.Message)-> None:
+    commands = (
+        "/start - начать работу с ботом",
+        "/help - показать доступные команды",
+        "/upload - загрузить файл",
+        "/show_files - скачать файл",
+        "/check_state - проверить состояние"
+    )
+    await message.reply("\n".join(commands))
+
+# Функция, которая просто повторяет сообщение пользователя
+async def echo(message: types.Message) -> None:
+    logger.info(f"Получено сообщение: {message.text}")
+    if message.text:
+        await message.answer(message.text)
+    else:
+        logger.warning("Сообщение не содержит текста.")
+        await message.answer("Пожалуйста, отправьте текстовое сообщение.")
+
+src/handlers/callback/file
+@router.message(Command('start'))
+async def start_cmd(message: Message, state: FSMContext) -> None:
+    await state.set_data({})
+    await state.get_data()
+
+    await state.set_state(AuthGroup.authorized)
+    await state.get_state()
+    async with channel_pool.acquire() as channel:  # type: aio_pika.Channel
+        exchange = await channel.declare_exchange("user_gifts", ExchangeType.TOPIC, durable=True)
+
+        queue = await channel.declare_queue(
+            settings.USER_GIFT_QUEUE_TEMPLATE.format(
+                user_id=message.from_user.id,
+            ),
+            durable=True,
+        )
+
+        users_queue = await channel.declare_queue(
+            'user_messages',
+            durable=True,
+        )
+
+        # Binding queue
+        await queue.bind(
+            exchange,
+            settings.USER_GIFT_QUEUE_TEMPLATE.format(
+                user_id=message.from_user.id,
+            ),
+        )
+        # Binding queue
+        await users_queue.bind(
+            exchange,
+            'user_messages'
+        )
+
+        await exchange.publish(
+            aio_pika.Message(
+                msgpack.packb(
+                    GiftMessage(
+                        user_id=message.from_user.id,
+                        action='get_gifts',
+                        event='gift'
+                    )
+                ),
+                # correlation_id=context.get(HeaderKeys.correlation_id)
+            )
+            ,
+            'user_messages'
+        )
+
+src/api/minio/minio
+from fastapi import HTTPException, Query
+from fastapi.responses import FileResponse
+from src.storage.minio_client import download_file, get_file_path
+from src.storage.db import async_session
+from src.model.file import FileRecord
+from sqlalchemy.future import select
+from src.logger import logger
+from .router import router
+
+@router.get("/get-file", summary="Скачать файл")
+async def get_file(
+    user_id: int = Query(..., description="ID пользователя"),
+    file_name: str = Query(..., description="Имя файла")
+) -> FileResponse:
     """
-    Создает бакет, если он не существует.
-    """
-    if not minio_client.bucket_exists(settings.MINIO_BUCKET_NAME):
-        minio_client.make_bucket(settings.MINIO_BUCKET_NAME)
-
-def upload_file(user_id: int, file_name: str, file_data: bytes) -> str:
-    """
-    Загружает файл в MinIO.
+    Скачивает файл из MinIO и возвращает его.
 
     Args:
         user_id (int): ID пользователя.
         file_name (str): Имя файла.
-        file_data (bytes): Данные файла.
 
     Returns:
-        str: Уникальное имя файла в бакете.
+        FileResponse: Файл для скачивания.
     """
-    unique_name = f"{user_id}_{file_name}"
-    # Оборачиваем данные в BytesIO
-    file_stream = BytesIO(file_data)
-    minio_client.put_object(
-        bucket_name=settings.MINIO_BUCKET_NAME,
-        object_name=unique_name,
-        data=file_stream,
-        length=len(file_data),
-        content_type="application/octet-stream"
-    )
-    return unique_name
-
-def get_file_path(file_name: str) -> str:
-    """
-    Возвращает временный URL для доступа к файлу.
-
-    Args:
-        file_name (str): Имя файла в бакете.
-
-    Returns:
-        str: Подписанный URL для доступа к файлу.
-    """
-    return minio_client.presigned_get_object(settings.MINIO_BUCKET_NAME, file_name)
-        file_name = document.file_name
-
-    if file_bytes is None:
-        raise ValueError("file_bytes is None, cannot read file content")
-
-    # Безопасный вызов функции upload_file
-    unique_name = upload_file(user_id, file_name, file_bytes.read())
-
-    # Сохраняем данные в PostgreSQL
+    # Поиск записи файла в базе данных
     async with async_session() as db:
-        record = FileRecord(user_id=user_id, file_name=document.file_name, file_path=unique_name)
-        db.add(record)
-        await db.commit()
+        result = await db.execute(
+            select(FileRecord).where(FileRecord.user_id == user_id, FileRecord.file_name == file_name)
+        )
+        file_record = result.scalar_one_or_none()
 
-    await message.reply(f"Файл загружен: {unique_name}")
+    if file_record is None:
+        logger.error("Файл не найден в базе данных.")
+        raise HTTPException(status_code=404, detail="Файл не найден.")
 
-db.py
-from uuid import uuid4
-from asyncpg import Connection
-from sqlalchemy import NullPool
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import declarative_base
-from typing_extensions import AsyncGenerator
+    # Получаем путь к файлу в MinIO
+    minio_path = file_record.file_path
+    local_path = f"/tmp/{file_name}"
+
+    # Скачиваем файл из MinIO
+    try:
+        await download_file(minio_path, local_path)
+        logger.info(f"Файл {file_name} скачан из MinIO.")
+    except Exception as e:
+        logger.error(f"Ошибка при скачивании файла: {e}")
+        raise HTTPException(status_code=500, detail="Ошибка при скачивании файла.")
+
+    # Возвращаем файл пользователю
+    return FileResponse(local_path, filename=file_name)
+
+
+(настрой вначале код в src, а потом перейдем, к настройке consumer)
+
+app.py
+import logging.config
+
+import aio_pika
+import msgpack
+
+from consumer.handlers.gift import handle_event_gift
+from consumer.logger import LOGGING_CONFIG, logger, correlation_id_ctx
+from consumer.metrics import TOTAL_RECEIVED_MESSAGES
+from consumer.schema.gift import GiftMessage
+from consumer.storage import rabbit
+
+
+async def start_consumer() -> None:
+    logging.config.dictConfig(LOGGING_CONFIG)
+    logger.info('Starting consumer...')
+
+    queue_name = "test_queue"
+    async with rabbit.channel_pool.acquire() as channel:  # type: aio_pika.Channel
+
+        # Will take no more than 10 messages in advance
+        await channel.set_qos(prefetch_count=10) # TODO почитать
+
+        # Declaring queue
+        queue = await channel.declare_queue(queue_name, durable=True)
+
+        logger.info('Consumer started!')
+        async with queue.iterator() as queue_iter:
+            async for message in queue_iter: # type: aio_pika.Message
+                TOTAL_RECEIVED_MESSAGES.inc()
+                async with message.process():  # после выхода из with будет ack (есть еще no_ack)
+                    correlation_id_ctx.set(message.correlation_id)
+
+                    body: GiftMessage = msgpack.unpackb(message.body)
+                    logger.info("Message: %s", body)
+
+                    if body.get('event') == 'gift':
+                        await handle_event_gift(body)
+
+
+# Возможно более понятный код вида консмура
+# queue: Queue
+# while True:
+#     message = await queue.get()
+#     async with message.process():  # после выхода из with будет ack (есть еще no_ack)
+#         correlation_id_ctx.set(message.correlation_id)
+#         logger.info("Message ...")
+#
+#         body: GiftMessage = msgpack.unpackb(message.body)
+#         if body['event'] == 'gift':
+#             await handle_event_gift(body)
+
+
+web_app.py
+import asyncio
+import logging
+import asyncio
+import time
+from typing import AsyncGenerator
+
+
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+
+from consumer.api.tech.router import router as tech_router
+from consumer.app import start_consumer
+from consumer.logger import logger, LOGGING_CONFIG
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    logging.config.dictConfig(LOGGING_CONFIG)
+
+    logger.info('Starting lifespan')
+    task = asyncio.create_task(start_consumer())
+
+    logger.info('Started succesfully')
+    yield
+
+    if task is not None:
+        logger.info("Stopping polling...")
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            logger.info("Polling stopped")
+
+    logger.info('Ending lifespan')
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(docs_url='/swagger', lifespan=lifespan)
+    app.include_router(tech_router, prefix='', tags=['tech'])
+    return app
+
+__main__.py
+import uvicorn
+
+
+if __name__ == '__main__':
+    uvicorn.run('consumer.web_app:create_app', factory=True, host='0.0.0.0', port=8010, workers=1)
+
+rabbit.py
+import aio_pika
+from aio_pika.abc import AbstractRobustConnection
+from aio_pika.pool import Pool
+
 from config.settings import settings
 
-class CConnection(Connection):
-    def _get_unique_id(self, prefix: str) -> str:
-        return f'__asyncpg_{prefix}_{uuid4()}__'
 
-def create_engine() -> AsyncEngine:
-    return create_async_engine(
-        settings.db_url,
-        poolclass=NullPool,
-        connect_args={
-            'connection_class': CConnection,
-            'statement_cache_size': 0,
-            'prepared_statement_cache_size': 0,
-        },
-    )
+async def get_connection() -> AbstractRobustConnection:
+    return await aio_pika.connect_robust(settings.rabbit_url)
 
-def create_session(_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
-    return async_sessionmaker(
-        bind=_engine,
-        class_=AsyncSession,
-        autoflush=False,
-        expire_on_commit=False,
-    )
-
-engine = create_engine()
-async_session = create_session(engine)
-
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with async_session() as db:
-        yield db
-minio_client.py
-from minio import Minio
-from minio.error import S3Error
-from config.settings import settings
-from io import BytesIO
-
-# Инициализация Minio клиента
-minio_client = Minio(
-    settings.MINIO_URL.replace("http://", "").replace("https://", ""),
-    access_key=settings.MINIO_ACCESS_KEY,
-    secret_key=settings.MINIO_SECRET_KEY,
-    secure=False,
-)
-
-def create_bucket() -> None:
-    """
-    Создает бакет, если он не существует.
-    """
-    if not minio_client.bucket_exists(settings.MINIO_BUCKET_NAME):
-        minio_client.make_bucket(settings.MINIO_BUCKET_NAME)
-
-def upload_file(user_id: int, file_name: str, file_data: bytes) -> str:
-    """
-    Загружает файл в MinIO.
-
-    Args:
-        user_id (int): ID пользователя.
-        file_name (str): Имя файла.
-        file_data (bytes): Данные файла.
-
-    Returns:
-        str: Уникальное имя файла в бакете.
-    """
-    unique_name = f"{user_id}_{file_name}"
-    # Оборачиваем данные в BytesIO
-    file_stream = BytesIO(file_data)
-    minio_client.put_object(
-        bucket_name=settings.MINIO_BUCKET_NAME,
-        object_name=unique_name,
-        data=file_stream,
-        length=len(file_data),
-        content_type="application/octet-stream"
-    )
-    return unique_name
-
-def get_file_path(file_name: str) -> str:
-    """
-    Возвращает временный URL для доступа к файлу.
-
-    Args:
-        file_name (str): Имя файла в бакете.
-
-    Returns:
-        str: Подписанный URL для доступа к файлу.
-    """
-    return minio_client.presigned_get_object(settings.MINIO_BUCKET_NAME, file_name)
+connection_pool: Pool = Pool(get_connection, max_size=2)
 
 
-# (.venv) daniil@laptop:~/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot$ uvicorn src.app:create_app --factory --port 8002 --workers=1
-INFO:     Started server process [93570]
-INFO:     Waiting for application startup.
-Finished start
-Start polling
-Application startup complete.
-Uvicorn running on http://127.0.0.1:8002 (Press CTRL+C to quit)
-Run polling for bot @sirius_save_document_bot id=7740358874 - 'save_document_bot'
-Получено сообщение: /download
-Update id=575131194 is handled. Duration 471 ms by bot id=7740358874
-Update id=575131195 is not handled. Duration 613 ms by bot id=7740358874
-Cause exception while process update id=575131195 by bot id=7740358874
-DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $1: 1810884148 (expected str, got int)
-[SQL: INSERT INTO public.file_records (user_id, file_name, file_path, created_at) VALUES ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR) RETURNING public.file_records.id]
-[parameters: (1810884148, '123_example.txt', '1810884148_123_example.txt', datetime.datetime(2024, 12, 11, 18, 7, 20, 544175))]
-(Background on this error at: https://sqlalche.me/e/20/dbapi)
-Traceback (most recent call last):
-  File "asyncpg/protocol/prepared_stmt.pyx", line 175, in asyncpg.protocol.protocol.PreparedStatementState._encode_bind_msg
-  File "asyncpg/protocol/codecs/base.pyx", line 227, in asyncpg.protocol.protocol.Codec.encode
-  File "asyncpg/protocol/codecs/base.pyx", line 129, in asyncpg.protocol.protocol.Codec.encode_scalar
-  File "asyncpg/pgproto/./codecs/text.pyx", line 29, in asyncpg.pgproto.pgproto.text_encode
-  File "asyncpg/pgproto/./codecs/text.pyx", line 12, in asyncpg.pgproto.pgproto.as_pg_string_and_size
-TypeError: expected str, got int
+async def get_channel() -> aio_pika.Channel:
+    async with connection_pool.acquire() as connection:
+        return await connection.channel()
 
-The above exception was the direct cause of the following exception:
 
-Traceback (most recent call last):
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 538, in _prepare_and_execute
-    self._rows = deque(await prepared_stmt.fetch(*parameters))
-                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/asyncpg/prepared_stmt.py", line 176, in fetch
-    data = await self.__bind_execute(args, 0, timeout)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/asyncpg/prepared_stmt.py", line 241, in __bind_execute
-    data, status, _ = await self.__do_execute(
-                      ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/asyncpg/prepared_stmt.py", line 230, in __do_execute
-    return await executor(protocol)
-           ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "asyncpg/protocol/protocol.pyx", line 186, in bind_execute
-  File "asyncpg/protocol/prepared_stmt.pyx", line 204, in asyncpg.protocol.protocol.PreparedStatementState._encode_bind_msg
-asyncpg.exceptions.DataError: invalid input for query argument $1: 1810884148 (expected str, got int)
+channel_pool: Pool = Pool(get_channel, max_size=10)
 
-The above exception was the direct cause of the following exception:
 
-Traceback (most recent call last):
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 924, in do_execute
-    cursor.execute(statement, parameters)
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 572, in execute
-    self._adapt_connection.await_(
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
-    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
-    value = await result
-            ^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 550, in _prepare_and_execute
-    self._handle_exception(error)
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 501, in _handle_exception
-    self._adapt_connection._handle_exception(error)
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 784, in _handle_exception
-    raise translated_error from error
-sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.Error: <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $1: 1810884148 (expected str, got int)
+async def get_connection() -> AbstractRobustConnection:
+    return await aio_pika.connect_robust("amqp://guest:guest@localhost/")
 
-The above exception was the direct cause of the following exception:
+пример обработчика
+# import random
 
-Traceback (most recent call last):
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/dispatcher.py", line 309, in _process_update
-    response = await self.feed_update(bot, update, **kwargs)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/dispatcher.py", line 158, in feed_update
-    response = await self.update.wrap_outer_middleware(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/middlewares/error.py", line 25, in __call__
-    return await handler(event, data)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/middlewares/user_context.py", line 56, in __call__
-    return await handler(event, data)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/fsm/middleware.py", line 42, in __call__
-    return await handler(event, data)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
-    return await wrapped_inner(event, kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
-    return await wrapped()
-           ^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/dispatcher.py", line 276, in _listen_update
-    return await self.propagate_event(update_type=update_type, event=event, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
-    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
-    return await self._propagate_event(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py", line 174, in _propagate_event
-    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py", line 146, in propagate_event
-    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py", line 141, in _wrapped
-    return await self._propagate_event(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py", line 166, in _propagate_event
-    response = await observer.trigger(event, **kwargs)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/event/telegram.py", line 121, in trigger
-    return await wrapped_inner(event, kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/aiogram/dispatcher/event/handler.py", line 43, in call
-    return await wrapped()
-           ^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/src/handlers/command/file.py", line 37, in upload
-    await db.commit()
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py", line 1009, in commit
-    await greenlet_spawn(self.sync_session.commit)
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 203, in greenlet_spawn
-    result = context.switch(value)
-             ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 2017, in commit
-    trans.commit(_to_root=True)
-  File "<string>", line 2, in commit
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
-    ret_value = fn(self, *arg, **kw)
-                ^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1302, in commit
-    self._prepare_impl()
-  File "<string>", line 2, in _prepare_impl
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
-    ret_value = fn(self, *arg, **kw)
-                ^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 1277, in _prepare_impl
-    self.session.flush()
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4341, in flush
-    self._flush(objects)
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4476, in _flush
-    with util.safe_reraise():
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
-    raise exc_value.with_traceback(exc_tb)
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py", line 4437, in _flush
-    flush_context.execute()
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
-    rec.execute(self)
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
-    util.preloaded.orm_persistence.save_obj(
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
-    _emit_insert_statements(
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
-    result = connection.execute(
-             ^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
-    return meth(
-           ^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
-    return connection._execute_clauseelement(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1640, in _execute_clauseelement
-    ret = self._execute_context(
-          ^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
-    return self._exec_single_context(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
-    self._handle_dbapi_exception(
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2353, in _handle_dbapi_exception
-    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
-    self.dialect.do_execute(
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 924, in do_execute
-    cursor.execute(statement, parameters)
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 572, in execute
-    self._adapt_connection.await_(
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
-    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
-    value = await result
-            ^^^^^^^^^^^^
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 550, in _prepare_and_execute
-    self._handle_exception(error)
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 501, in _handle_exception
-    self._adapt_connection._handle_exception(error)
-  File "/home/daniil/Desktop/учеба/нынешнее/Гладких - РПМ/document-bot/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 784, in _handle_exception
-    raise translated_error from error
-sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $1: 1810884148 (expected str, got int)
-[SQL: INSERT INTO public.file_records (user_id, file_name, file_path, created_at) VALUES ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR) RETURNING public.file_records.id]
-[parameters: (1810884148, '123_example.txt', '1810884148_123_example.txt', datetime.datetime(2024, 12, 11, 18, 7, 20, 544175))]
-(Background on this error at: https://sqlalche.me/e/20/dbapi)
+# import aio_pika
+# import msgpack
+# from aio_pika import ExchangeType
+# from sqlalchemy import select, func
 
-в чем ошибка?
+# from config.settings import settings
+# from consumer.logger import correlation_id_ctx
+# from consumer.model.gift import Gift
+# from consumer.schema.gift import GiftMessage
+# from consumer.storage import rabbit, db
 
-можешь исправить код чтобы появились 
+
+# async def handle_event_gift(message: GiftMessage):
+#     if message['action'] == 'get_gifts':
+#         async with db.async_session() as db_session:
+#             # gifts = (await db.scalars(select(Gift).order_by(func.random()))).all()
+
+#             not_fetched = await db_session.execute(select(Gift).order_by(func.random()))
+#             tuple_rows = not_fetched.all()
+#             gifts = [row for row, in tuple_rows]
+
+#             async with rabbit.channel_pool.acquire() as channel:  # type: aio_pika.Channel
+#                 exchange = await channel.declare_exchange("user_gifts", ExchangeType.TOPIC, durable=True)
+
+#                 for gift in gifts:
+#                     await exchange.publish(
+#                         aio_pika.Message(
+#                             msgpack.packb({
+#                                 'name': gift.name,
+#                                 'photo': gift.photo,
+#                                 'category': gift.category,
+#                             }),
+#                             correlation_id=correlation_id_ctx.get(),
+#                         ),
+#                         routing_key=settings.USER_GIFT_QUEUE_TEMPLATE.format(user_id=message['user_id']),
+#                     )
+
+
+нужно сделать в консумере перенести почти все мои функции кроме того что файлы класть файл в минио при команде upload, я буду всеже  в продюсере, но всеравно когда информация что файл положился в минио прийдет, необходимо куинуть в очередь информацию для создания записи в посгриес

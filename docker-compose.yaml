@@ -31,37 +31,26 @@ services:
       timeout: 20s
       retries: 3
 
-
-  # db:
-  #   image: postgres:13.2
-  #   ports:
-  #     - "5432:5432"
-  #   command: [ "postgres", "-c", "log_statement=all", "-c", "log_destination=stderr" ]
-  #   healthcheck:
-  #     test: [ "CMD", "pg_isready", "-U", "postgres", "-d", "postgres" ]
-  #     interval: 1s
-  #     retries: 20
-  #   env_file:
-  #     - config/.env.db
-
   redis:
     image: redis:6.2.4
     ports:
       - "6379:6379"
 
-  # bot:
-  #   build:
-  #     dockerfile: Dockerfile
-  #     context: .
-  #   command: poetry run uvicorn src.app:create_app --factory --port 8000 --workers=1
-  #   ports:
-  #     - "8000:8000"
+  bot:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    command: poetry run uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8000 --workers=1
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app
 
-  # rabbitmq:
-  #   image: rabbitmq:3.13.7-management
-  #   ports:
-  #     - "5672:5672"
-  #     - "15672:15672"
+  rabbitmq:
+    image: rabbitmq:3.13.7-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
 
 #  prometheus:
 #    image: prom/prometheus

@@ -4,6 +4,9 @@ from typing import AsyncGenerator
 
 import uvicorn
 
+from starlette_context import plugins
+from starlette_context.middleware import RawContextMiddleware
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
@@ -12,15 +15,34 @@ from src.api.tg.router import router as tg_router
 from src.bg_tasks import background_tasks
 from src.bot import dp, bot
 from src.storage.minio_client import create_bucket
+from src.api.minio.minio import router as minio_router
 
 from src.logger import LOGGING_CONFIG, logger
 
+from src.storage.rabbit import channel_pool
+from aio_pika import ExchangeType, Channel
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logging.config.dictConfig(LOGGING_CONFIG)
     # Инициализируем MinIO bucket
     create_bucket()
+    
+    # Инициализируем общую очередь для передачи сообщений
+    async with channel_pool.acquire() as channel: 
+        exchange = await channel.declare_exchange("user_files", ExchangeType.TOPIC, durable=True)
+
+        users_queue = await channel.declare_queue(
+            'user_messages',
+            durable=True,
+        )
+
+        # Binding queue
+        await users_queue.bind(
+            exchange,
+            'user_messages'
+        )
+
 
     polling_task: asyncio.Task[None] | None = None
     wh_info = await bot.get_webhook_info()
@@ -49,8 +71,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(docs_url='/swagger', lifespan=lifespan)
-    app.include_router(tg_router, prefix='/tg', tags=['tg'])
+    app = FastAPI(docs_url='/swagger', lifespan=lifespan, title="Document Bot")
+    app.include_router(tg_router, prefix='/tg', tags=['Telegram Webhook'])
+    app.include_router(minio_router, prefix="/tg/webhook", tags=['MinIO API'])
+    
+    app.add_middleware(RawContextMiddleware, plugins=[plugins.CorrelationIdPlugin()])
     return app
 
 

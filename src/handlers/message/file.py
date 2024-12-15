@@ -3,11 +3,15 @@ from aiogram.types import ContentType
 from aiogram.fsm.context import FSMContext
 from aiogram import F
 from src.storage.minio_client import upload_file
-from src.storage.db import async_session
-from src.model.meta import FileRecord
 from src.logger import logger  # Импорт логгера
-from pathlib import Path
 from src.handlers.states.file import FileStates
+from src.storage.rabbit import channel_pool
+import aio_pika
+import msgpack
+from src.schema.file import FileMessage
+from aio_pika import ExchangeType
+from starlette_context.header_keys import HeaderKeys
+from starlette_context import context
 
 from .router import router
 
@@ -16,14 +20,15 @@ async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
     """
     Обрабатывает файл, если состояние пользователя ожидает файл.
     """
-    if message.from_user is None:
-        logger.error("Ошибка: сообщение не содержит информации об отправителе (from_user = None).")
-        return
 
     # Проверяем текущее состояние пользователя
     current_state = await state.get_state()
 
     if current_state == FileStates.waiting_for_file.state:
+        if message.from_user is None:
+            logger.error("Ошибка: сообщение не содержит информации об отправителе (from_user = None).")
+            return
+
         # Если ожидается файл
         if not message.document:
             await message.reply("Пожалуйста, отправьте файл.")
@@ -47,16 +52,27 @@ async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
         user_id = message.from_user.id
         unique_name = upload_file(user_id, document.file_name, file_bytes.read())
 
-        # Сохраняем данные в БД
-        async with async_session() as db:
-            record = FileRecord(
-                user_id=user_id,
-                file_name=document.file_name,
-                file_exention=Path(document.file_name).suffix,
-                file_path=unique_name
+        logger.info("""Файл {} загружен""".format(document.file_name)+ """ID пользователя: {}""".format(user_id) + """Путь к файлу: {}""".format(unique_name))
+        
+        # Подключаемся к очереди
+        async with channel_pool.acquire() as channel:
+            # Объявляем обменник и очередь
+            exchange = await channel.declare_exchange("user_files", ExchangeType.TOPIC, durable=True)
+            queue = await channel.declare_queue('user_messages', durable=True)
+            await queue.bind(exchange, 'user_messages')
+
+            await exchange.publish(
+                aio_pika.Message(
+                    msgpack.packb(FileMessage(
+                        user_id=message.from_user.id,
+                        action="upload_file",
+                        file_name=document.file_name,
+                    ).model_dump()),
+                    correlation_id=context.get(HeaderKeys.correlation_id, None),
+                ),
+                routing_key='user_messages'
             )
-            db.add(record)
-            await db.commit()
+
 
         # Сбрасываем состояние
         await state.clear()
