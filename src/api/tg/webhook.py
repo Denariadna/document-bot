@@ -7,12 +7,12 @@ from fastapi.responses import ORJSONResponse
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from src import bot
 from src.api.tg.router import router
 from src.bg_tasks import background_tasks
-from src import bot
 
 
-@router.post("/webhook")
+@router.post('/webhook')
 async def webhook(request: Request) -> JSONResponse:
     update = await request.json()
 
@@ -20,4 +20,4 @@ async def webhook(request: Request) -> JSONResponse:
     background_tasks.add(task)
     task.add_done_callback(background_tasks.discard)
 
-    return ORJSONResponse({"status": "ok"})
+    return ORJSONResponse({'status': 'ok'})

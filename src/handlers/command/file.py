@@ -1,51 +1,49 @@
+import aio_pika
+import msgpack
+from aio_pika import ExchangeType
 from aiogram import types
 from aiogram.fsm.context import FSMContext
-import msgpack
-import aio_pika
-from aio_pika import ExchangeType
+from starlette_context import context
+from starlette_context.header_keys import HeaderKeys
+
+from src.handlers.states.file import FileStates
+from src.logger import logger
 from src.schema.file import FileMessage
 from src.storage.rabbit import channel_pool
-from src.logger import logger
-from src.handlers.states.file import FileStates
-from starlette_context.header_keys import HeaderKeys
-from starlette_context import context
 
 
 async def initiate_upload(message: types.Message, state: FSMContext) -> None:
     if message.from_user is None:
-        logger.error("Ошибка: сообщение не содержит информации об отправителе (from_user = None).")
+        logger.error('Ошибка: сообщение не содержит информации об отправителе (from_user = None).')
         return
 
     # Устанавливаем состояние через FSMContext
     await state.set_state(FileStates.waiting_for_file)
-    await message.reply("Отправьте файл, который хотите загрузить.")
+    await message.reply('Отправьте файл, который хотите загрузить.')
 
 
 async def check_state(message: types.Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     await message.reply(f"Текущее состояние: {current_state or 'Нет состояния'}")
 
+
 async def show_files(message: types.Message) -> None:
     """Кладёт информацию о пользователе в очередь."""
     if message.from_user is None:
-        logger.error("Ошибка: сообщение не содержит информации об отправителе (from_user = None).")
+        logger.error('Ошибка: сообщение не содержит информации об отправителе (from_user = None).')
         return
 
     # Подключаемся к очереди через пул каналов
     async with channel_pool.acquire() as channel:
         # Объявляем обменник и очередь
-        exchange = await channel.declare_exchange("user_files", ExchangeType.TOPIC, durable=True)
+        exchange = await channel.declare_exchange('user_files', ExchangeType.TOPIC, durable=True)
         queue = await channel.declare_queue('user_messages', durable=True)
         await queue.bind(exchange, 'user_messages')
 
         await exchange.publish(
-            aio_pika.Message( 
-                msgpack.packb(FileMessage(
-                    user_id=message.from_user.id,
-                    action="show_files_user"
-                ).model_dump()),
-                correlation_id=context.get(HeaderKeys.correlation_id, None),
+            aio_pika.Message(
+                msgpack.packb(FileMessage(user_id=message.from_user.id, action='show_files_user').model_dump()),
+                correlation_id=context.get(HeaderKeys.correlation_id),
             ),
-            
-            routing_key='user_messages'
+            routing_key='user_messages',
         )

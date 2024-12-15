@@ -1,0 +1,14 @@
+[
+  {
+    'id': 1,
+    'name': 'aaa',
+    'category': 'aaa',
+    'photo': 'aaa'
+  },
+  {
+    'id': 2,
+    'name': 'bbb',
+    'category': 'bbb',
+    'photo': 'bbb'
+  }
+]

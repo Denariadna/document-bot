@@ -1,16 +1,13 @@
 import asyncio
 import logging
-import asyncio
-import time
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from consumer.api.tech.router import router as tech_router
 from consumer.app import start_consumer
-from consumer.logger import logger, LOGGING_CONFIG
+from consumer.logger import LOGGING_CONFIG, logger
 
 
 @asynccontextmanager
@@ -24,12 +21,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     if task is not None:
-        logger.info("Stopping polling...")
+        logger.info('Stopping polling...')
         task.cancel()
         try:
             await task
         except asyncio.CancelledError:
-            logger.info("Polling stopped")
+            logger.info('Polling stopped')
 
     logger.info('Ending lifespan')
 
