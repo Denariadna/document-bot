@@ -11,19 +11,19 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
 
-    RABBIT_HOST: str = 'localhost' # rabbitmq
-    RABBIT_PORT: int = 5672
-    RABBIT_USER: str = 'guest'
-    RABBIT_PASSWORD: str = 'guest'
+    RABBIT_HOST: str #= 'localhost' # rabbitmq
+    RABBIT_PORT: int #= 5672
+    RABBIT_USER: str #= 'guest'
+    RABBIT_PASSWORD: str #= 'guest'
 
     REDIS_HOST: str
     REDIS_PORT: str
     
     # Добавляем MinIO настройки
-    MINIO_URL: str = "http://localhost:9000"
-    MINIO_ACCESS_KEY: str = "minioadmin"
-    MINIO_SECRET_KEY: str = "minioadmin"
-    MINIO_BUCKET_NAME: str = "documents"
+    MINIO_URL: str #= "http://localhost:9000"
+    MINIO_ACCESS_KEY: str #= "minioadmin"
+    MINIO_SECRET_KEY: str #= "minioadmin"
+    MINIO_BUCKET_NAME: str #= "documents"
 
     @property
     def db_url(self) -> str:
