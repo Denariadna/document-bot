@@ -5,9 +5,11 @@ import aio_pika
 from aio_pika import ExchangeType
 from src.schema.file import FileMessage
 from src.storage.rabbit import channel_pool
-from src.logger import logger  # Импорт логгера
+from src.logger import logger
 from src.handlers.states.file import FileStates
-from consumer.logger import correlation_id_ctx
+from starlette_context.header_keys import HeaderKeys
+from starlette_context import context
+
 
 async def initiate_upload(message: types.Message, state: FSMContext) -> None:
     if message.from_user is None:
@@ -32,7 +34,7 @@ async def show_files(message: types.Message) -> None:
     # Подключаемся к очереди через пул каналов
     async with channel_pool.acquire() as channel:
         # Объявляем обменник и очередь
-        exchange = await channel.declare_exchange("user_gifts", ExchangeType.TOPIC, durable=True)
+        exchange = await channel.declare_exchange("user_files", ExchangeType.TOPIC, durable=True)
         queue = await channel.declare_queue('user_messages', durable=True)
         await queue.bind(exchange, 'user_messages')
 
@@ -41,13 +43,9 @@ async def show_files(message: types.Message) -> None:
                 msgpack.packb(FileMessage(
                     user_id=message.from_user.id,
                     action="show_files_user"
-                ).model_dump()
-            ),
-                # correlation_id=correlation_id_ctx.get(),
+                ).model_dump()),
+                correlation_id=context.get(HeaderKeys.correlation_id, None),
             ),
             
             routing_key='user_messages'
         )
-
-    # Подтверждение пользователю
-    await message.reply("Ваш запрос обрабатывается.")

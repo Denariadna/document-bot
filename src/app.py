@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     
     # Инициализируем общую очередь для передачи сообщений
     async with channel_pool.acquire() as channel: 
-        exchange = await channel.declare_exchange("user_gifts", ExchangeType.TOPIC, durable=True)
+        exchange = await channel.declare_exchange("user_files", ExchangeType.TOPIC, durable=True)
 
         users_queue = await channel.declare_queue(
             'user_messages',

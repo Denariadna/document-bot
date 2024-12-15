@@ -1,23 +1,18 @@
 from sqlalchemy.future import select
 from src.model.file import FileRecord
-from src.logger import logger  # Импорт логгера
-
 from consumer.schema.file import FileMessage
+from consumer.logger import logger  # Импорт логгера
 from consumer.storage import db
-
 from consumer.bot import bot
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+
+
 async def show_files(message: FileMessage) -> None:
     """Обработчик действия show_files_user."""
-    # if message.from_user is None:
-    #     logger.error("Message has no user information.")
-    #     return
     if not message:
         logger.error("Message is not an instance of FileMessage: %s", message)
         return
-
-    logger.info(message)
 
     user_id = message['user_id']
 
@@ -28,7 +23,6 @@ async def show_files(message: FileMessage) -> None:
         result = await session.execute(
             select(FileRecord.file_name).where(FileRecord.user_id == user_id)
         )
-        logger.info("Files for user %s: %s", user_id, result)
         files = result.scalars().all()
 
     logger.info("Files for user %s: %s", user_id, files)
@@ -44,6 +38,5 @@ async def show_files(message: FileMessage) -> None:
             for file in files
         ]
     )
-    logger.debug("Sending message to user_id=%s with files: %s", user_id, files, keyboard)
 
     await bot.send_message(chat_id=user_id, text="Ваши файлы:", reply_markup=keyboard)

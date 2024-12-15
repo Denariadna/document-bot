@@ -2,12 +2,12 @@ import logging.config
 
 import msgpack
 
-from consumer.handlers.file import show_files
+from consumer.handlers.show_file import show_files
 from consumer.logger import LOGGING_CONFIG, logger, correlation_id_ctx
 from consumer.metrics import TOTAL_RECEIVED_MESSAGES
 from consumer.schema.file import FileMessage
 from consumer.storage import rabbit
-
+from consumer.handlers.upload_file import upload_file_handler
 
 async def start_consumer() -> None:
     logging.config.dictConfig(LOGGING_CONFIG)
@@ -27,18 +27,17 @@ async def start_consumer() -> None:
             async for message in queue_iter: # aio_pika.Message
                 TOTAL_RECEIVED_MESSAGES.inc()
                 async with message.process():  
-                    # if message.correlation_id is None: 
-                    #     logger.error("Message has no correlation_id")
-                    #     return # после выхода из with будет ack (есть еще no_ack)
+                    if message.correlation_id is None: 
+                        logger.error("Message has no correlation_id")
+                        return # после выхода из with будет ack (есть еще no_ack)
                     correlation_id_ctx.set(message.correlation_id)
 
                     body: FileMessage = msgpack.unpackb(message.body)
                     logger.info("Message: %s", body)
-                    logger.info("Message correlation_id: %s", message.correlation_id)
-                    logger.info("Message correlation_id: %s", correlation_id_ctx.get())
-                    logger.info("Message correlation_id: %s", body['user_id'])
-                    
-                    
+
                     if body['action'] == 'show_files_user':
                         await show_files(body)
-
+                    elif body['action'] == 'upload_file':
+                        await upload_file_handler(body)
+                    else:
+                        logger.warning("Unknown action: %s", body.action)
