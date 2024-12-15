@@ -1,7 +1,7 @@
 from collections import deque
 from pathlib import Path
-from typing import AsyncGenerator, Any
-from unittest.mock import MagicMock, AsyncMock
+from typing import Any, AsyncGenerator
+from unittest.mock import AsyncMock
 
 import aio_pika
 import msgpack
@@ -10,12 +10,12 @@ import pytest_asyncio
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from consumer.storage import db as consumer_db, rabbit as consumer_rabbit
 from scripts.load_fixture import load_fixture
 from src import bot
-from src.storage import redis, rabbit, db
-from consumer.storage import rabbit as consumer_rabbit, db as consumer_db
+from src.storage import db, rabbit, redis
 from src.storage.db import engine, get_db
-from tests.mocking.rabbit import MockQueue, MockChannelPool, MockChannel, MockExchange, MockExchangeMessage
+from tests.mocking.rabbit import MockChannel, MockChannelPool, MockExchange, MockExchangeMessage, MockQueue
 from tests.mocking.redis import MockRedis
 
 
@@ -25,6 +25,7 @@ async def db_session(app: FastAPI) -> AsyncSession:
         session_maker = async_sessionmaker(bind=conn, class_=AsyncSession)  # create sessio_maker through transcation
 
         async with session_maker() as session:
+
             async def overrided_db_session() -> AsyncGenerator[AsyncSession, None]:
                 yield session
 
@@ -45,6 +46,7 @@ async def db_session(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> AsyncSess
         session_maker = async_sessionmaker(bind=conn, class_=AsyncSession)  # create sessio_maker through transcation
 
         async with session_maker() as session:
+
             async def overrided_db_session() -> AsyncGenerator[AsyncSession, None]:
                 yield session
 
@@ -65,17 +67,19 @@ def _mock_redis(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def mock_bot_dp(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
     mock = AsyncMock()
-    monkeypatch.setattr(bot, 'dp', mock) # bot.dp -> mock
+    monkeypatch.setattr(bot, 'dp', mock)  # bot.dp -> mock
     return mock
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_exchange() -> MockExchange:
     return MockExchange()
 
 
-@pytest_asyncio.fixture()
-async def _load_queue(monkeypatch: pytest.MonkeyPatch, predefined_queue: Any, correlation_id, mock_exchange: MockExchange):
+@pytest_asyncio.fixture
+async def _load_queue(
+    monkeypatch: pytest.MonkeyPatch, predefined_queue: Any, correlation_id, mock_exchange: MockExchange
+):
 
     queue = MockQueue(deque())
 

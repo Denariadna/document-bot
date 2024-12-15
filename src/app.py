@@ -1,36 +1,33 @@
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 import uvicorn
-
+from aio_pika import ExchangeType
+from fastapi import FastAPI
 from starlette_context import plugins
 from starlette_context.middleware import RawContextMiddleware
 
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-
 from config.settings import settings
+from src.api.minio.minio import router as minio_router
 from src.api.tg.router import router as tg_router
 from src.bg_tasks import background_tasks
-from src.bot import dp, bot
-from src.storage.minio_client import create_bucket
-from src.api.minio.minio import router as minio_router
-
+from src.bot import bot, dp
 from src.logger import LOGGING_CONFIG, logger
-
+from src.storage.minio_client import create_bucket
 from src.storage.rabbit import channel_pool
-from aio_pika import ExchangeType, Channel
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logging.config.dictConfig(LOGGING_CONFIG)
     # Инициализируем MinIO bucket
     create_bucket()
-    
+
     # Инициализируем общую очередь для передачи сообщений
-    async with channel_pool.acquire() as channel: 
-        exchange = await channel.declare_exchange("user_files", ExchangeType.TOPIC, durable=True)
+    async with channel_pool.acquire() as channel:
+        exchange = await channel.declare_exchange('user_files', ExchangeType.TOPIC, durable=True)
 
         users_queue = await channel.declare_queue(
             'user_messages',
@@ -38,11 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
 
         # Binding queue
-        await users_queue.bind(
-            exchange,
-            'user_messages'
-        )
-
+        await users_queue.bind(exchange, 'user_messages')
 
     polling_task: asyncio.Task[None] | None = None
     wh_info = await bot.get_webhook_info()
@@ -51,16 +44,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         polling_task = asyncio.create_task(dp.start_polling(bot, handle_signals=False))
 
-    logger.info("Finished start")
+    logger.info('Finished start')
     yield
 
     if polling_task is not None:
-        logger.info("Stopping polling...")
+        logger.info('Stopping polling...')
         polling_task.cancel()
         try:
             await polling_task
         except asyncio.CancelledError:
-            logger.info("Polling stopped")
+            logger.info('Polling stopped')
 
     while background_tasks:
         await asyncio.sleep(0)
@@ -71,10 +64,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(docs_url='/swagger', lifespan=lifespan, title="Document Bot")
+    app = FastAPI(docs_url='/swagger', lifespan=lifespan, title='Document Bot')
     app.include_router(tg_router, prefix='/tg', tags=['Telegram Webhook'])
-    app.include_router(minio_router, prefix="/tg/webhook", tags=['MinIO API'])
-    
+    app.include_router(minio_router, prefix='/tg/webhook', tags=['MinIO API'])
+
     app.add_middleware(RawContextMiddleware, plugins=[plugins.CorrelationIdPlugin()])
     return app
 

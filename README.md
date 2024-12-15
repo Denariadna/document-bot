@@ -9,26 +9,18 @@
 scripts/cleanup_ports.sh
 ```
 
+можно запустить через polling и через webhook, но на polling не будет работать работать отправка файлов через ручку /get-file
+
 ### Up docker compose 
 ```bash
 docker compose up --build -d
 ```
+возможно бот упадет при запуске, но если его перезагрузить (только бота), то он будет работать
+под ботом понимается продюсер в папке src/app.py
 
 ### Migrate
 ```bash
 PYTHONPATH=. python3 scripts/migrate.py
-```
-
-### Запуск бота
-можно запустить через polling и через webhook, но на polling не будет работать работать отправка файлов через ручку /get-file
-- polling
-```bash
-poetry run uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8001 --workers=1
-```
-- webhook
-```bash
-ngrok http 8000
-poetry run uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8001 --workers=1
 ```
 
 

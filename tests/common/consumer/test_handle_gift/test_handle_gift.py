@@ -1,11 +1,10 @@
 import uuid
+from pathlib import Path
 
 import aio_pika
 import msgpack
 import pytest
-from pathlib import Path
-
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 
 from config.settings import settings
 from consumer.app import start_consumer
@@ -25,9 +24,9 @@ SEED_DIR = BASE_DIR / 'seeds'
             [SEED_DIR / 'public.gift.json'],
             str(uuid.uuid4()),
         ),
-    ]
+    ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @pytest.mark.usefixtures('_load_queue', '_load_seeds')
 async def test_handle_gift(db_session, predefined_queue, correlation_id, mock_exchange: MockExchange) -> None:
     await start_consumer()
@@ -41,16 +40,16 @@ async def test_handle_gift(db_session, predefined_queue, correlation_id, mock_ex
 
         for gift in gifts:
             expected_message = aio_pika.Message(
-                msgpack.packb({
-                    'name': gift.name,
-                    'photo': gift.photo,
-                    'category': gift.category,
-                }),
+                msgpack.packb(
+                    {
+                        'name': gift.name,
+                        'photo': gift.photo,
+                        'category': gift.category,
+                    }
+                ),
                 correlation_id=correlation_id,
             )
 
-            expected_calls.append(
-                ('publish', (expected_message,), {'routing_key': expected_routing_key})
-            )
+            expected_calls.append(('publish', (expected_message,), {'routing_key': expected_routing_key}))
 
         mock_exchange.assert_has_calls(expected_calls, any_order=True)

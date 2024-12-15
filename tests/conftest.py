@@ -1,16 +1,12 @@
-import asyncio
-
 import aiohttp
 import httpx
 import pytest
 import pytest_asyncio
 from asgi_lifespan import LifespanManager
 from fastapi import FastAPI
-from starlette.testclient import TestClient
 
 from scripts.migrate import migrate
 from src.app import create_app
-
 
 
 @pytest_asyncio.fixture(scope='session', autouse=True)
@@ -23,7 +19,6 @@ async def _init_db() -> aiohttp.ClientSession:
 @pytest.fixture(scope='session')
 def app() -> FastAPI:
     return create_app()
-
 
 
 @pytest_asyncio.fixture(scope='session')
