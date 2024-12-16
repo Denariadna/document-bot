@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-import requests
+
 
 BASE_DIR = Path(__file__).parent
 SEED_DIR = BASE_DIR / 'seeds'

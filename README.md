@@ -13,7 +13,7 @@ scripts/cleanup_ports.sh
 
 ### Up docker compose 
 ```bash
-docker compose up --build -d
+docker compose up --build
 ```
 возможно бот упадет при запуске, но если его перезагрузить (только бота), то он будет работать
 под ботом понимается продюсер в папке src/app.py

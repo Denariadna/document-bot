@@ -53,7 +53,7 @@ sudo systemctl restart nginx
 # sudo find . -name '__pycache__' -type d -exec rm -rf {} +
 
 # Скачать модуль в poetry
-# python3 -m poetry add <module_name>
+python3 -m poetry add <module_name>
 
 # wget https://dl.min.io/client/mc/release/linux-amd64/mc
 # chmod +x mc
