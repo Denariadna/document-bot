@@ -16,6 +16,31 @@ from src.storage.rabbit import channel_pool
 from .router import router
 
 
+def shorten_file_name(file_name, max_length=32):
+    """
+    Сокращает имя файла, если оно превышает допустимую длину.
+    Сохраняет начальные символы, последние 4 символа и расширение.
+
+    :param file_name: Полное имя файла (с расширением).
+    :param max_length: Максимально допустимая длина имени файла (по умолчанию 40).
+    :return: Сокращенное имя файла.
+    """
+    # Проверяем, нужно ли сокращение
+    if len(file_name) <= max_length:
+        return file_name
+
+    # Разделяем имя файла и расширение
+    name, extension = file_name.rsplit('.', 1)
+
+    # Вычисляем допустимую длину для начальной части названия
+    remaining_length = max_length - len(extension) - 1 - 4  # -1 для точки и -4 для последних символов
+    start_length = remaining_length
+
+    # Формируем сокращенное название
+    shortened_name = f"{name[:start_length]}***{name[-4:]}.{extension}"
+    return shortened_name
+
+
 @router.message(F.content_type == ContentType.DOCUMENT)
 async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
     """
@@ -51,10 +76,12 @@ async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
             return
 
         user_id = message.from_user.id
-        unique_name = upload_file(user_id, document.file_name, file_bytes.read())
+        file_name = shorten_file_name(document.file_name)
+
+        unique_name = upload_file(user_id, file_name, file_bytes.read())
 
         logger.info(
-            'Файл {} загружен'.format(document.file_name)
+            'Файл {} загружен'.format(file_name)
             + 'ID пользователя: {}'.format(user_id)
             + 'Путь к файлу: {}'.format(unique_name)
         )
@@ -72,7 +99,7 @@ async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
                         FileMessage(
                             user_id=message.from_user.id,
                             action='upload_file',
-                            file_name=document.file_name,
+                            file_name=file_name,
                         ).model_dump()
                     ),
                     correlation_id=context.get(HeaderKeys.correlation_id),
@@ -82,6 +109,6 @@ async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
 
         # Сбрасываем состояние
         await state.clear()
-        await message.reply(f'Файл {document.file_name} успешно загружен!')
+        await message.reply(f'Файл {file_name} успешно загружен!')
     else:
         await message.reply('Ваш запрос некорректен. Используйте команду для загрузки файла.')
