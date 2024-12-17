@@ -16,7 +16,7 @@ async def migrate() -> None:
     except IntegrityError:
         logging.exception('Ошибка: Таблицы уже существуют')
     except Exception as e:
-        logging.exception(f'Ошибка при выполнении миграции: {e}')
+        logging.exception('Ошибка при выполнении миграции: %s', e)
 
 
 if __name__ == '__main__':

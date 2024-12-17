@@ -1,14 +1,12 @@
 import asyncio
 import json
-import logging
 from pathlib import Path
 
-from sqlalchemy import text, select, insert
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.model import meta
-from src.storage.db import engine, async_session
+from src.storage.db import async_session
 
 
 # NOTE: Не использовать для прода. Нужно использовать alembic
@@ -28,6 +26,6 @@ async def main(paths: list[Path]) -> None:
 if __name__ == '__main__':
     asyncio.run(main(
         [
-            Path('fixtures/public.gift.json'),
+            Path('fixtures/public.file_records.json'),
         ]
     ))

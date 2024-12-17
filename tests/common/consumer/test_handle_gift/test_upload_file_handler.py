@@ -8,8 +8,8 @@ from sqlalchemy import func, select
 
 from config.settings import settings
 from consumer.app import start_consumer
-from consumer.model.gift import Gift
-from consumer.schema.gift import GiftMessage
+from consumer.model.file import FileRecord
+from consumer.schema.file import FileMessage
 from tests.mocking.rabbit import MockExchange
 
 BASE_DIR = Path(__file__).parent
@@ -20,15 +20,15 @@ SEED_DIR = BASE_DIR / 'seeds'
     ('predefined_queue', 'seeds', 'correlation_id'),
     [
         (
-            GiftMessage(event='gift', action='get_gifts', user_id=1),
-            [SEED_DIR / 'public.gift.json'],
+            FileMessage(user_id=1, action='upload_file', file_name='aaa.pdf'),
+            [SEED_DIR / 'public.file_records.json'],
             str(uuid.uuid4()),
         ),
     ],
 )
 @pytest.mark.asyncio
 @pytest.mark.usefixtures('_load_queue', '_load_seeds')
-async def test_handle_gift(db_session, predefined_queue, correlation_id, mock_exchange: MockExchange) -> None:
+async def test_upload_file_handler(db_session, predefined_queue, correlation_id, mock_exchange: MockExchange) -> None:
     await start_consumer()
     expected_routing_key = settings.USER_GIFT_QUEUE_TEMPLATE.format(user_id=predefined_queue['user_id'])
 

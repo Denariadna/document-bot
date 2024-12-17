@@ -54,9 +54,9 @@ async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
         unique_name = upload_file(user_id, document.file_name, file_bytes.read())
 
         logger.info(
-            "Файл {} загружен".format(document.file_name)
-            + "ID пользователя: {}".format(user_id)
-            + "Путь к файлу: {}".format(unique_name)
+            'Файл {} загружен'.format(document.file_name)
+            + 'ID пользователя: {}'.format(user_id)
+            + 'Путь к файлу: {}'.format(unique_name)
         )
 
         # Подключаемся к очереди

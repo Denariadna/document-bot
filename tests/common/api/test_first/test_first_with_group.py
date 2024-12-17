@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pytest
 
-
 BASE_DIR = Path(__file__).parent
 SEED_DIR = BASE_DIR / 'seeds'
 SEED_DIR1 = BASE_DIR / 'seeds1'
