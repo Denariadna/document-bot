@@ -12,6 +12,7 @@ from starlette_context.middleware import RawContextMiddleware
 from config.settings import settings
 from src.api.minio.minio import router as minio_router
 from src.api.tg.router import router as tg_router
+from src.api.tech.router import router
 from src.bg_tasks import background_tasks
 from src.bot import bot, dp
 from src.logger import LOGGING_CONFIG, logger
@@ -65,6 +66,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def create_app() -> FastAPI:
     app = FastAPI(docs_url='/swagger', lifespan=lifespan, title='Document Bot')
+    app.include_router(router, prefix='', tags=['Metrics && Health'])
     app.include_router(tg_router, prefix='/tg', tags=['Telegram Webhook'])
     app.include_router(minio_router, prefix='/tg/webhook', tags=['MinIO API'])
 
