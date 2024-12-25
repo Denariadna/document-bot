@@ -17,14 +17,14 @@ SEED_DIR1 = BASE_DIR / 'seeds1'
     [
         (
             [
-                {'id': 1, 'category': 'aaa', 'photo': 'aaa', 'name': 'aaa'},
-                {'id': 2, 'category': 'bbb', 'photo': 'bbb', 'name': 'bbb'},
+                {"user_id": 1, "action": "upload_file", "file_name": "aaa.pdf"},
+                {"user_id": 2, "action": "upload_file", "file_name": "bbb.pdf"}
             ],
         ),
         (
             [
-                {'id': 1, 'category': 'ccc', 'photo': 'ccc', 'name': 'ccc'},
-                {'id': 2, 'category': 'bbb', 'photo': 'bbb', 'name': 'bbb'},
+                {"user_id": 1, "action": "upload_file", "file_name": "aaa.pdf"},
+                {"user_id": 2, "action": "upload_file", "file_name": "bbb.pdf"}
             ],
         ),
     ],

@@ -15,7 +15,7 @@ from src.storage.rabbit import channel_pool
 
 from .router import router
 
-from src.metrics import LATENCY, TOTAL_SEND_MESSAGES
+from src.metrics import TOTAL_SEND_MESSAGES, measure_time
 
 
 def shorten_file_name(file_name, max_length=32):
@@ -44,6 +44,7 @@ def shorten_file_name(file_name, max_length=32):
 
 
 @router.message(F.content_type == ContentType.DOCUMENT)
+@measure_time('handle_file_upload')
 async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
     """
     Обрабатывает файл, если состояние пользователя ожидает файл.
@@ -88,32 +89,31 @@ async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
             + 'Путь к файлу: {}'.format(unique_name)
         )
 
-        with LATENCY.labels(operation='upload_file').time():
-            # Подключаемся к очереди
-            async with channel_pool.acquire() as channel:
-                # Объявляем обменник и очередь
-                exchange = await channel.declare_exchange('user_files', ExchangeType.TOPIC, durable=True)
-                queue = await channel.declare_queue('user_messages', durable=True)
-                await queue.bind(exchange, 'user_messages')
+        # Подключаемся к очереди
+        async with channel_pool.acquire() as channel:
+            # Объявляем обменник и очередь
+            exchange = await channel.declare_exchange('user_files', ExchangeType.TOPIC, durable=True)
+            queue = await channel.declare_queue('user_messages', durable=True)
+            await queue.bind(exchange, 'user_messages')
 
-                await exchange.publish(
-                    aio_pika.Message(
-                        msgpack.packb(
-                            FileMessage(
-                                user_id=message.from_user.id,
-                                action='upload_file',
-                                file_name=file_name,
-                            ).model_dump()
-                        ),
-                        correlation_id=context.get(HeaderKeys.correlation_id),
+            await exchange.publish(
+                aio_pika.Message(
+                    msgpack.packb(
+                        FileMessage(
+                            user_id=message.from_user.id,
+                            action='upload_file',
+                            file_name=file_name,
+                        ).model_dump()
                     ),
-                    routing_key='user_messages',
-                )
+                    correlation_id=context.get(HeaderKeys.correlation_id),
+                ),
+                routing_key='user_messages',
+            )
 
-            TOTAL_SEND_MESSAGES.labels(operation='upload_file').inc()
+        TOTAL_SEND_MESSAGES.labels(operation='upload_file').inc()
 
-            # Сбрасываем состояние
-            await state.clear()
-            await message.reply(f'Файл {file_name} успешно загружен!')
+        # Сбрасываем состояние
+        await state.clear()
+        await message.reply(f'Файл {file_name} успешно загружен!')
     else:
         await message.reply('Ваш запрос некорректен. Используйте команду для загрузки файла.')

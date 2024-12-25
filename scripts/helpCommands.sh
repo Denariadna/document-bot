@@ -34,6 +34,8 @@ PYTHONPATH=. python3 -m src.app
 # Запустить app.py (bot_webhook)
 # python3 -m uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8000
 poetry run uvicorn src.app:create_app --factory --host 0.0.0.0 --port 8001 --workers=1
+python3 -m consumer
+
 
 sudo lsof -i :80
 sudo lsof -i :9000

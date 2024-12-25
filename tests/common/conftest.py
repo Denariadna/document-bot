@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from consumer.storage import db as consumer_db, rabbit as consumer_rabbit
 from scripts.load_fixture import load_fixture
 from src import bot
-from src.storage import db, rabbit, redis
+from src.storage import db, rabbit, redis_client
 from src.storage.db import engine, get_db
 from tests.mocking.rabbit import MockChannel, MockChannelPool, MockExchange, MockExchangeMessage, MockQueue
 from tests.mocking.redis import MockRedis
@@ -60,7 +60,7 @@ async def db_session(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> AsyncSess
 
 @pytest.fixture(autouse=True)
 def _mock_redis(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(redis, 'redis_storage', MockRedis())
+    monkeypatch.setattr(redis_client, 'redis_storage', MockRedis())
     yield
 
 

@@ -90,6 +90,10 @@ class MockMessageProcess:
         return self
 
 
+class MockExchange(AsyncMock):
+    ...
+
+
 @dataclass
 class MockMessage:
     body: bytes
@@ -97,6 +101,7 @@ class MockMessage:
 
     def process(self) -> MockMessageProcess:
         return MockMessageProcess()
+
 
 class MockExchangeMessage(aio_pika.Message):
     def __eq__(self, other):
