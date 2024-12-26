@@ -9,36 +9,20 @@ from starlette_context.header_keys import HeaderKeys
 
 from src.handlers.states.file import FileStates
 from src.logger import logger  # Импорт логгера
+from src.metrics import TOTAL_SEND_MESSAGES, measure_time
 from src.schema.file import FileMessage
 from src.storage.minio_client import upload_file
 from src.storage.rabbit import channel_pool
 
 from .router import router
 
-from src.metrics import TOTAL_SEND_MESSAGES, measure_time
 
-
-def shorten_file_name(file_name, max_length=32):
-    """
-    Сокращает имя файла, если оно превышает допустимую длину.
-    Сохраняет начальные символы, последние 4 символа и расширение.
-
-    :param file_name: Полное имя файла (с расширением).
-    :param max_length: Максимально допустимая длина имени файла (по умолчанию 40).
-    :return: Сокращенное имя файла.
-    """
-    # Проверяем, нужно ли сокращение
+def shorten_file_name(file_name: str, max_length: int = 32) -> str:
     if len(file_name) <= max_length:
         return file_name
-
-    # Разделяем имя файла и расширение
     name, extension = file_name.rsplit('.', 1)
-
-    # Вычисляем допустимую длину для начальной части названия
-    remaining_length = max_length - len(extension) - 1 - 4  # -1 для точки и -4 для последних символов
+    remaining_length = max_length - len(extension) - 1 - 4
     start_length = remaining_length
-
-    # Формируем сокращенное название
     shortened_name = f"{name[:start_length]}***{name[-4:]}.{extension}"
     return shortened_name
 

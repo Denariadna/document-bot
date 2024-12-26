@@ -11,12 +11,12 @@ from starlette_context.middleware import RawContextMiddleware
 
 from config.settings import settings
 from src.api.minio.minio import router as minio_router
-from src.api.tg.router import router as tg_router
 from src.api.tech.router import router
+from src.api.tg.router import router as tg_router
 from src.bg_tasks import background_tasks
 from src.bot import bot, dp
 from src.logger import LOGGING_CONFIG, logger
-from src.storage.minio_client import create_bucket
+from src.storage import minio_client
 from src.storage.rabbit import channel_pool
 
 
@@ -24,7 +24,7 @@ from src.storage.rabbit import channel_pool
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logging.config.dictConfig(LOGGING_CONFIG)
     # Инициализируем MinIO bucket
-    create_bucket()
+    minio_client.create_bucket()
 
     # Инициализируем общую очередь для передачи сообщений
     async with channel_pool.acquire() as channel:
@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         # Binding queue
         await users_queue.bind(exchange, 'user_messages')
-
+    #
     polling_task: asyncio.Task[None] | None = None
     wh_info = await bot.get_webhook_info()
     if settings.BOT_WEBHOOK_URL and wh_info.url != settings.BOT_WEBHOOK_URL:
@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     while background_tasks:
         await asyncio.sleep(0)
-
+    #
     await bot.delete_webhook()
 
     logger.info('Ending lifespan')

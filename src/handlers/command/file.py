@@ -8,10 +8,9 @@ from starlette_context.header_keys import HeaderKeys
 
 from src.handlers.states.file import FileStates
 from src.logger import logger
+from src.metrics import TOTAL_SEND_MESSAGES, measure_time
 from src.schema.file import FileMessage
 from src.storage.rabbit import channel_pool
-
-from src.metrics import TOTAL_SEND_MESSAGES, measure_time
 
 
 async def initiate_upload(message: types.Message, state: FSMContext) -> None:

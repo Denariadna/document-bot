@@ -1,10 +1,11 @@
-from prometheus_client import Counter, Histogram
+import asyncio
 import functools
 import time
-from src.logger import logger
-import asyncio
 from typing import Any, Callable, Coroutine, TypeVar, Union
 
+from prometheus_client import Counter, Histogram
+
+from src.logger import logger
 
 BUCKETS = [
     0.0001,
