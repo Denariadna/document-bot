@@ -83,5 +83,5 @@ async def download_file(minio_path: str) -> io.BytesIO:
 
         return file_bytes
     except Exception as e:
-        logger.error(f'Ошибка при загрузке файла {minio_path} из MinIO: {e}')
+        logger.error('Ошибка при загрузке файла {minio_path} из MinIO: %s', e)
         raise

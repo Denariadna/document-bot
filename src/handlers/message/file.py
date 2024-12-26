@@ -9,6 +9,7 @@ from starlette_context.header_keys import HeaderKeys
 
 from src.handlers.states.file import FileStates
 from src.logger import logger  # Импорт логгера
+from src.metrics import TOTAL_SEND_MESSAGES, measure_time
 from src.schema.file import FileMessage
 from src.storage.minio_client import upload_file
 from src.storage.rabbit import channel_pool
@@ -16,7 +17,18 @@ from src.storage.rabbit import channel_pool
 from .router import router
 
 
+def shorten_file_name(file_name: str, max_length: int = 32) -> str:
+    if len(file_name) <= max_length:
+        return file_name
+    name, extension = file_name.rsplit('.', 1)
+    remaining_length = max_length - len(extension) - 1 - 4
+    start_length = remaining_length
+    shortened_name = f'{name[:start_length]}***{name[-4:]}.{extension}'
+    return shortened_name
+
+
 @router.message(F.content_type == ContentType.DOCUMENT)
+@measure_time('handle_file_upload')
 async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
     """
     Обрабатывает файл, если состояние пользователя ожидает файл.
@@ -51,12 +63,14 @@ async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
             return
 
         user_id = message.from_user.id
-        unique_name = upload_file(user_id, document.file_name, file_bytes.read())
+        file_name = shorten_file_name(document.file_name)
+
+        unique_name = upload_file(user_id, file_name, file_bytes.read())
 
         logger.info(
-            "Файл {} загружен".format(document.file_name)
-            + "ID пользователя: {}".format(user_id)
-            + "Путь к файлу: {}".format(unique_name)
+            'Файл {} загружен'.format(file_name)
+            + 'ID пользователя: {}'.format(user_id)
+            + 'Путь к файлу: {}'.format(unique_name)
         )
 
         # Подключаемся к очереди
@@ -72,7 +86,7 @@ async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
                         FileMessage(
                             user_id=message.from_user.id,
                             action='upload_file',
-                            file_name=document.file_name,
+                            file_name=file_name,
                         ).model_dump()
                     ),
                     correlation_id=context.get(HeaderKeys.correlation_id),
@@ -80,8 +94,10 @@ async def handle_file_upload(message: types.Message, state: FSMContext) -> None:
                 routing_key='user_messages',
             )
 
+        TOTAL_SEND_MESSAGES.labels(operation='upload_file').inc()
+
         # Сбрасываем состояние
         await state.clear()
-        await message.reply(f'Файл {document.file_name} успешно загружен!')
+        await message.reply(f'Файл {file_name} успешно загружен!')
     else:
         await message.reply('Ваш запрос некорректен. Используйте команду для загрузки файла.')

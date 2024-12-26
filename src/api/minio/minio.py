@@ -28,9 +28,9 @@ async def get_file(
     try:
         # Загружаем файл в байтах
         file_bytes = await download_file(minio_path)
-        logger.info(f'Файл {file_name} скачан из MinIO.')
+        logger.info('Файл %s скачан из MinIO.', file_name)
     except Exception as e:
-        logger.error(f'Ошибка при скачивании файла: {e}')
+        logger.error('Ошибка при скачивании файла: %s', e)
         raise HTTPException(status_code=500, detail='Ошибка при скачивании файла.')
 
     # Возвращаем файл пользователю

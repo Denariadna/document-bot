@@ -11,6 +11,7 @@ from starlette_context.middleware import RawContextMiddleware
 
 from config.settings import settings
 from src.api.minio.minio import router as minio_router
+from src.api.tech.router import router
 from src.api.tg.router import router as tg_router
 from src.bg_tasks import background_tasks
 from src.bot import bot, dp
@@ -36,7 +37,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         # Binding queue
         await users_queue.bind(exchange, 'user_messages')
-
+    # #
     polling_task: asyncio.Task[None] | None = None
     wh_info = await bot.get_webhook_info()
     if settings.BOT_WEBHOOK_URL and wh_info.url != settings.BOT_WEBHOOK_URL:
@@ -57,7 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     while background_tasks:
         await asyncio.sleep(0)
-
+    #
     await bot.delete_webhook()
 
     logger.info('Ending lifespan')
@@ -65,6 +66,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def create_app() -> FastAPI:
     app = FastAPI(docs_url='/swagger', lifespan=lifespan, title='Document Bot')
+    app.include_router(router, prefix='', tags=['Metrics && Health'])
     app.include_router(tg_router, prefix='/tg', tags=['Telegram Webhook'])
     app.include_router(minio_router, prefix='/tg/webhook', tags=['MinIO API'])
 

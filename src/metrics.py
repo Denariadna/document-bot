@@ -1,6 +1,19 @@
+import asyncio
+import functools
+import time
+from typing import Any, Callable, Coroutine, TypeVar, Union
+
 from prometheus_client import Counter, Histogram
 
+from src.logger import logger
+
 BUCKETS = [
+    0.0001,
+    0.001,
+    0.01,
+    0.02,
+    0.05,
+    0.1,
     0.2,
     0.4,
     0.6,
@@ -14,24 +27,49 @@ BUCKETS = [
     float('+inf'),
 ]
 
-# histogram_quantile(0.99, sum(rate(latency_seconds_bucket[1m])) by (le, handler))
 LATENCY = Histogram(
     'latency_seconds',
-    'Number of seconds',
-    labelnames=['handler'],
+    'Время выполнения операций',
+    labelnames=['operation'],
     buckets=BUCKETS,
 )
 
-# sum(increase(counter_handler_total{handler='method_funcio...'}[1m]))
-TOTAL_REQ = Counter('counter_handler', 'Считает то-то', labelnames=['handler'])
-
-# sum(increase(counter_handler_total{handler='method_funcio...'}[1m]))
 TOTAL_SEND_MESSAGES = Counter(
-    'send_messages',
-    'Считает то-то',
+    'send_messages_total',
+    'Количество отправленных сообщений',
+    labelnames=['operation'],
 )
-TOTAL_REQ_WITH_STATUS_CODE = Counter('counter_handler1', 'Считает то-то', labelnames=['handler', 'status_code'])
 
-TOTAL_REQ.labels('handler1').inc()
-TOTAL_REQ_WITH_STATUS_CODE.labels('handler1', 500).inc()
-TOTAL_REQ_WITH_STATUS_CODE.labels('handler1', 200).inc()
+T = TypeVar('T', bound=Union[Callable[..., Coroutine[Any, Any, Any]], Callable[..., Any]])
+
+
+def measure_time(operation_name: str) -> Callable[[T], T]:
+    def decorator(func: T) -> T:
+        @functools.wraps(func)
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+            start_time = time.perf_counter()
+            try:
+                result = await func(*args, **kwargs)
+                return result
+            finally:
+                end_time = time.perf_counter()
+                duration = end_time - start_time
+                LATENCY.labels(operation=operation_name).observe(duration)
+                logger.info('Время выполнения %s: %.6f секунд', operation_name, duration)
+
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+            start_time = time.perf_counter()
+            try:
+                result = func(*args, **kwargs)
+                return result
+            finally:
+                end_time = time.perf_counter()
+                duration = end_time - start_time
+                LATENCY.labels(operation=operation_name).observe(duration)
+                logger.info('Время выполнения %s: %.6f секунд', operation_name, duration)
+
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper  # type: ignore
+        return sync_wrapper  # type: ignore
+
+    return decorator

@@ -13,23 +13,23 @@ SEED_DIR1 = BASE_DIR / 'seeds1'
 
 
 @pytest.mark.parametrize(
-    ('expected_result',),
+    'expected_result',
     [
         (
             [
-                {'id': 1, 'category': 'aaa', 'photo': 'aaa', 'name': 'aaa'},
-                {'id': 2, 'category': 'bbb', 'photo': 'bbb', 'name': 'bbb'},
+                {'user_id': 1, 'action': 'upload_file', 'file_name': 'aaa.pdf'},
+                {'user_id': 2, 'action': 'upload_file', 'file_name': 'bbb.pdf'},
             ],
         ),
         (
             [
-                {'id': 1, 'category': 'ccc', 'photo': 'ccc', 'name': 'ccc'},
-                {'id': 2, 'category': 'bbb', 'photo': 'bbb', 'name': 'bbb'},
+                {'user_id': 1, 'action': 'upload_file', 'file_name': 'aaa.pdf'},
+                {'user_id': 2, 'action': 'upload_file', 'file_name': 'bbb.pdf'},
             ],
         ),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_webhook(expected_result, http_client, mock_bot_dp: AsyncMock) -> None:
     chat = Chat(id=1, type='private')
     user = User(id=1, is_bot=False, is_premium=False, last_name='test', first_name='test')

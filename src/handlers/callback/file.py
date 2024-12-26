@@ -28,5 +28,5 @@ async def handle_file_selection(callback: CallbackQuery) -> None:
         )
         await callback.answer('Файл успешно отправлен!')
     except Exception as e:
-        logger.error(f'Ошибка при отправке файла: {e}')
+        logger.error('Ошибка при отправке файла: %s', e)
         await callback.message.answer('Произошла ошибка при отправке файла.')

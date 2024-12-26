@@ -14,7 +14,7 @@ async def show_files(message: FileMessage) -> None:
         logger.error('Message is not an instance of FileMessage: %s', message)
         return
 
-    user_id = message['user_id']
+    user_id = message.user_id
 
     logger.info('User ID: %s', user_id)
 

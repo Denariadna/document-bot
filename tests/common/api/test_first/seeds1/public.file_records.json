@@ -1,0 +1,12 @@
+[
+  {
+    "user_id": 1,
+    "action": "upload_file",
+    "file_name": "aaa.pdf"
+  },
+  {
+    "user_id": 2,
+    "action": "upload_file",
+    "file_name": "bbb.pdf"
+  }
+]

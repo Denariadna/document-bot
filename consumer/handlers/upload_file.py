@@ -10,8 +10,13 @@ async def upload_file_handler(body: FileMessage) -> None:
     """Обрабатывает сообщение от RabbitMQ и сохраняет запись в PostgreSQL."""
 
     try:
-        user_id = body['user_id']
-        file_name = body['file_name']
+        user_id = body.user_id
+        file_name = body.file_name
+
+        if file_name is None:
+            logger.error('file_name не может быть None.')
+            return
+
         file_path = f'{user_id}_{file_name}'
 
         # Сохраняем запись в БД
@@ -25,6 +30,6 @@ async def upload_file_handler(body: FileMessage) -> None:
             db.add(record)
             await db.commit()
 
-        logger.info(f'Запись для файла {file_name} успешно добавлена в БД для пользователя {user_id}.')
+        logger.info('Запись для файла %s успешно добавлена в БД для пользователя %s.', file_name, user_id)
     except Exception as e:
-        logger.error(f'Ошибка при обработке файла в консюмере: {e}')
+        logger.error('Ошибка при обработке файла в консюмере: %s', e)

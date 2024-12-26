@@ -2,7 +2,7 @@ from typing import Any, Awaitable, Callable, Dict
 
 from aiogram import BaseMiddleware
 from aiogram.dispatcher.event.bases import SkipHandler
-from aiogram.types import Message, TelegramObject
+from aiogram.types import TelegramObject
 
 from src.handlers.states.auth import AuthGroup
 

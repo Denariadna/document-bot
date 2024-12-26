@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-import requests
 
 BASE_DIR = Path(__file__).parent
 SEED_DIR = BASE_DIR / 'seeds'
@@ -13,22 +12,22 @@ SEED_DIR1 = BASE_DIR / 'seeds1'
     ('seeds', 'expected_result'),
     [
         (
-            [SEED_DIR / 'public.gift.json'],
+            [SEED_DIR / 'public.file_records.json'],
             [
-                {'id': 1, 'category': 'aaa', 'photo': 'aaa', 'name': 'aaa'},
-                {'id': 2, 'category': 'bbb', 'photo': 'bbb', 'name': 'bbb'},
+                {'user_id': 1, 'action': 'upload_file', 'file_name': 'aaa.pdf'},
+                {'user_id': 2, 'action': 'upload_file', 'file_name': 'bbb.pdf'},
             ],
         ),
         (
-            [SEED_DIR1 / 'public.gift.json'],
+            [SEED_DIR1 / 'public.file_records.json'],
             [
-                {'id': 1, 'category': 'ccc', 'photo': 'ccc', 'name': 'ccc'},
-                {'id': 2, 'category': 'bbb', 'photo': 'bbb', 'name': 'bbb'},
+                {'user_id': 1, 'action': 'upload_file', 'file_name': 'aaa.pdf'},
+                {'user_id': 2, 'action': 'upload_file', 'file_name': 'bbb.pdf'},
             ],
         ),
     ],
 )
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_first_with_group(expected_result, http_client) -> None:
     response = await http_client.get('/health')
     assert response.status_code == 200

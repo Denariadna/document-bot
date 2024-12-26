@@ -33,12 +33,12 @@ async def start_consumer() -> None:
                         return  # после выхода из with будет ack (есть еще no_ack)
                     correlation_id_ctx.set(message.correlation_id)
 
-                    body: FileMessage = msgpack.unpackb(message.body)
+                    body: FileMessage = FileMessage.model_validate(msgpack.unpackb(message.body))
                     logger.info('Message: %s', body)
 
-                    if body['action'] == 'show_files_user':
+                    if body.action == 'show_files_user':
                         await show_files(body)
-                    elif body['action'] == 'upload_file':
+                    elif body.action == 'upload_file':
                         await upload_file_handler(body)
                     else:
                         logger.warning('Unknown action: %s', body.action)

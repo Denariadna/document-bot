@@ -8,6 +8,7 @@ from starlette_context.header_keys import HeaderKeys
 
 from src.handlers.states.file import FileStates
 from src.logger import logger
+from src.metrics import TOTAL_SEND_MESSAGES, measure_time
 from src.schema.file import FileMessage
 from src.storage.rabbit import channel_pool
 
@@ -27,13 +28,13 @@ async def check_state(message: types.Message, state: FSMContext) -> None:
     await message.reply(f"Текущее состояние: {current_state or 'Нет состояния'}")
 
 
+@measure_time('show_files')
 async def show_files(message: types.Message) -> None:
     """Кладёт информацию о пользователе в очередь."""
     if message.from_user is None:
         logger.error('Ошибка: сообщение не содержит информации об отправителе (from_user = None).')
         return
 
-    # Подключаемся к очереди через пул каналов
     async with channel_pool.acquire() as channel:
         # Объявляем обменник и очередь
         exchange = await channel.declare_exchange('user_files', ExchangeType.TOPIC, durable=True)
@@ -47,3 +48,4 @@ async def show_files(message: types.Message) -> None:
             ),
             routing_key='user_messages',
         )
+    TOTAL_SEND_MESSAGES.labels(operation='show_files').inc()
