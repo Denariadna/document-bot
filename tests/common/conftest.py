@@ -1,7 +1,7 @@
 from collections import deque
 from pathlib import Path
 from typing import Any, AsyncGenerator
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import aio_pika
 import msgpack
@@ -91,3 +91,19 @@ async def _load_queue(
     monkeypatch.setattr(rabbit, 'channel_pool', pool)
     monkeypatch.setattr(consumer_rabbit, 'channel_pool', pool)
     monkeypatch.setattr(aio_pika, 'Message', MockExchangeMessage)
+
+
+# @pytest.fixture
+# def mock_rabbit_channel():
+#     """Мокаем канал RabbitMQ для тестов"""
+#     mock_channel = MagicMock()
+#     mock_channel.__aenter__.return_value = mock_channel
+#     return mock_channel
+
+
+# @pytest.fixture
+# def mock_db_session():
+#     """Мокаем сессию для работы с базой данных"""
+#     mock_session = MagicMock()
+#     mock_session.__aenter__.return_value = mock_session
+#     return mock_session

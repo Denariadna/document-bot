@@ -36,7 +36,7 @@ class MockChannel:
     async def declare_queue(self, *args, **kwargs) -> 'MockQueue':
         return self.queue
 
-    async def declare_exchange(self, *args, **kwargs) -> 'MockQueue':
+    async def declare_exchange(self, *args, **kwargs) -> 'MockExchange':
         return self.exchange
 
 
@@ -90,8 +90,21 @@ class MockMessageProcess:
         return self
 
 
-class MockExchange(AsyncMock):
-    ...
+@dataclass
+class MockExchange:
+    bindings: dict[str, str] = None
+
+    def __init__(self):
+        # Используем AsyncMock для асинхронных методов
+        self.bind = AsyncMock()
+        self.bindings = {}
+
+    async def bind(self, queue_name: str, routing_key: str) -> None:
+        """Имитация привязки очереди к exchange."""
+        if self.bindings is None:
+            self.bindings = {}
+        self.bindings[routing_key] = queue_name
+        print(f"Mock bind: Queue '{queue_name}' bound to exchange with routing key '{routing_key}'")
 
 
 @dataclass

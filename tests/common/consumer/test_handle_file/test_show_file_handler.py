@@ -1,18 +1,20 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from aiogram.types import InlineKeyboardMarkup
 from sqlalchemy.future import select
+
 from consumer.handlers.show_file import show_files
 from consumer.schema.file import FileMessage
 from src.model.file import FileRecord
 
 
 @pytest.mark.asyncio
-@patch("consumer.bot.bot.send_message")
-@patch("consumer.storage.db.async_session")
+@patch('consumer.bot.bot.send_message')
+@patch('consumer.storage.db.async_session')
 async def test_show_files(mock_async_session, mock_send_message):
     user_id = 123
-    files = ["file1.txt", "file2.pdf"]
+    files = ['file1.txt', 'file2.pdf']
     message = FileMessage(user_id=user_id, action="show_files_user")
 
     # Мок для базы данных
@@ -30,7 +32,7 @@ async def test_show_files(mock_async_session, mock_send_message):
 
     # Проверяем отправку сообщения через Telegram-бота
     keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[[{"text": file, "callback_data": f"file:{file}"}] for file in files]
+        inline_keyboard=[[{'text': file, "callback_data": f"file:{file}"}] for file in files]
     )
     mock_send_message.assert_called_once_with(chat_id=user_id, text="Ваши файлы:", reply_markup=keyboard)
 
