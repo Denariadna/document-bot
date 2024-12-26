@@ -23,7 +23,7 @@ def shorten_file_name(file_name: str, max_length: int = 32) -> str:
     name, extension = file_name.rsplit('.', 1)
     remaining_length = max_length - len(extension) - 1 - 4
     start_length = remaining_length
-    shortened_name = f"{name[:start_length]}***{name[-4:]}.{extension}"
+    shortened_name = f'{name[:start_length]}***{name[-4:]}.{extension}'
     return shortened_name
 
 

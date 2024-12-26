@@ -24,8 +24,10 @@ async def main(paths: list[Path]) -> None:
 
 
 if __name__ == '__main__':
-    asyncio.run(main(
-        [
-            Path('fixtures/public.file_records.json'),
-        ]
-    ))
+    asyncio.run(
+        main(
+            [
+                Path('fixtures/public.file_records.json'),
+            ]
+        )
+    )

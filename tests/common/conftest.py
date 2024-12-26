@@ -1,7 +1,7 @@
 from collections import deque
 from pathlib import Path
 from typing import Any, AsyncGenerator
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import aio_pika
 import msgpack
@@ -61,7 +61,6 @@ async def db_session(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> AsyncSess
 @pytest.fixture(autouse=True)
 def _mock_redis(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(redis_client, 'redis_storage', MockRedis())
-    yield
 
 
 @pytest.fixture(autouse=True)
@@ -91,19 +90,3 @@ async def _load_queue(
     monkeypatch.setattr(rabbit, 'channel_pool', pool)
     monkeypatch.setattr(consumer_rabbit, 'channel_pool', pool)
     monkeypatch.setattr(aio_pika, 'Message', MockExchangeMessage)
-
-
-# @pytest.fixture
-# def mock_rabbit_channel():
-#     """Мокаем канал RabbitMQ для тестов"""
-#     mock_channel = MagicMock()
-#     mock_channel.__aenter__.return_value = mock_channel
-#     return mock_channel
-
-
-# @pytest.fixture
-# def mock_db_session():
-#     """Мокаем сессию для работы с базой данных"""
-#     mock_session = MagicMock()
-#     mock_session.__aenter__.return_value = mock_session
-#     return mock_session

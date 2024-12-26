@@ -1,9 +1,9 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from consumer.handlers.show_file import show_files
 from consumer.schema.file import FileMessage
-from consumer.storage import db
-from src.model.file import FileRecord
 
 
 @pytest.mark.asyncio
@@ -24,6 +24,4 @@ async def test_show_files():
             mock_session.return_value.__aenter__.return_value.execute.assert_called_once()
 
             # Проверяем, что сообщение было отправлено
-            mock_send_message.assert_called_once_with(
-                chat_id=123, text='Ваши файлы:', reply_markup=MagicMock()
-            )
+            mock_send_message.assert_called_once_with(chat_id=123, text='Ваши файлы:', reply_markup=MagicMock())

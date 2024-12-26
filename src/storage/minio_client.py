@@ -13,7 +13,6 @@ minio_client = Minio(
     secret_key=settings.MINIO_SECRET_KEY,
     secure=False,
 )
-# minio_client = None
 
 
 def create_bucket() -> None:

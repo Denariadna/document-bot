@@ -55,7 +55,7 @@ def measure_time(operation_name: str) -> Callable[[T], T]:
                 end_time = time.perf_counter()
                 duration = end_time - start_time
                 LATENCY.labels(operation=operation_name).observe(duration)
-                logger.info(f"Время выполнения {operation_name}: {duration:.6f} секунд")
+                logger.info('Время выполнения %s: %.6f секунд', operation_name, duration)
 
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.perf_counter()
@@ -65,11 +65,11 @@ def measure_time(operation_name: str) -> Callable[[T], T]:
             finally:
                 end_time = time.perf_counter()
                 duration = end_time - start_time
-                logger.info(f"Duration for {operation_name}: {duration:.6f} seconds")
                 LATENCY.labels(operation=operation_name).observe(duration)
-                logger.info(f"Время выполнения {operation_name}: {duration:.6f} секунд")
+                logger.info('Время выполнения %s: %.6f секунд', operation_name, duration)
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper  # type: ignore
         return sync_wrapper  # type: ignore
+
     return decorator
